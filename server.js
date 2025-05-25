@@ -85,6 +85,17 @@ app.post("/solve-image", upload.single("image"), async (req, res) => {
   }
 });
 
+app.post("/solve-wolfram", async (req, res) => {
+  const { problem } = req.body;
+
+  const result = await solveWithWolfram(problem);
+  if (result) {
+    return res.json(result);
+  } else {
+    res.status(500).send("Failed to get step-by-step solution from Wolfram Alpha.");
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
