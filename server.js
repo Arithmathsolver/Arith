@@ -6,18 +6,33 @@ const multer = require("multer");
 const Tesseract = require("tesseract.js");
 const axios = require("axios");
 const path = require("path");
+const { OpenAI } = require("openai");
 
 dotenv.config();
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
-// Serve static frontend files
 app.use(express.static(path.join(__dirname, "public")));
-
-// Use memory storage for Render compatibility
 const upload = multer({ storage: multer.memoryStorage() });
+
+const solveWithGPT = async (problem) => {
+  try {
+    const prompt = `Solve this math problem with steps: ${problem}`;
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const steps = response.choices[0].message.content.trim();
+    return { provider: "gpt", steps };
+  } catch (err) {
+    console.error("GPT error:", err.message);
+    return null;
+  }
+};
 
 const solveWithWolfram = async (query) => {
   try {
@@ -60,6 +75,9 @@ const solveWithNewton = async (operation, expression) => {
 app.post("/solve", async (req, res) => {
   const { problem, operation, expression } = req.body;
 
+  const gptResult = await solveWithGPT(problem);
+  if (gptResult) return res.json(gptResult);
+
   const wolframResult = await solveWithWolfram(problem);
   if (wolframResult) return res.json(wolframResult);
 
@@ -76,6 +94,9 @@ app.post("/solve-image", upload.single("image"), async (req, res) => {
     const ocrResult = await Tesseract.recognize(imageBuffer, "eng");
     const extractedText = ocrResult.data.text;
 
+    const gptResult = await solveWithGPT(extractedText);
+    if (gptResult) return res.json({ extractedText, ...gptResult });
+
     const wolframResult = await solveWithWolfram(extractedText);
     if (wolframResult) return res.json({ extractedText, ...wolframResult });
 
@@ -89,18 +110,6 @@ app.post("/solve-image", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post("/solve-wolfram", async (req, res) => {
-  const { problem } = req.body;
-
-  const result = await solveWithWolfram(problem);
-  if (result) {
-    return res.json(result);
-  } else {
-    res.status(500).send("Failed to get step-by-step solution from Wolfram Alpha.");
-  }
-});
-
-// Serve index.html for root
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
