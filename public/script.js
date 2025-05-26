@@ -6,7 +6,7 @@ document.getElementById("solve-btn").addEventListener("click", async () => {
     resultDiv.textContent = "Solving...";
     stepsDiv.textContent = "";
 
-    const response = await fetch("http://localhost:3000/solve", {
+    const response = await fetch("/solve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ problem: input }),
@@ -14,7 +14,7 @@ document.getElementById("solve-btn").addEventListener("click", async () => {
 
     const data = await response.json();
 
-    const [firstLine, ...rest] = data.solution.split('\n');
+    const [firstLine, ...rest] = data.steps.split('\n');
     resultDiv.textContent = firstLine;
     stepsDiv.textContent = rest.join('\n');
 });
@@ -32,14 +32,14 @@ document.getElementById("image-input").addEventListener("change", async function
     resultDiv.textContent = "Processing image...";
     stepsDiv.textContent = "";
 
-    const response = await fetch("http://localhost:3000/solve-image", {
+    const response = await fetch("/solve-image", {
         method: "POST",
         body: formData,
     });
 
     const data = await response.json();
 
-    const [firstLine, ...rest] = data.solution.split('\n');
+    const [firstLine, ...rest] = data.steps.split('\n');
     resultDiv.textContent = firstLine;
     stepsDiv.textContent = rest.join('\n');
 });
