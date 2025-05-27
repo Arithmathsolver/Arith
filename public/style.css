@@ -48,3 +48,55 @@ textarea {
   box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
   white-space: pre-wrap;
 }
+
+/* Additional styles for tab UI and preview box */
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.tab-btn {
+  padding: 10px 20px;
+  margin: 0 5px;
+  border: none;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background-color: #007bff;
+  color: white;
+}
+.tab-content {
+  display: none;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.tab-content.active {
+  display: block;
+}
+.upload-container {
+  text-align: center;
+  margin-top: 10px;
+}
+#image-preview {
+  margin-top: 10px;
+  max-width: 100%;
+  height: auto;
+}
+.result-container {
+  max-width: 600px;
+  margin: 20px auto;
+}
+.result-box,
+.steps-box {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+  box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.05);
+}
+.steps-header {
+  font-weight: 600;
+  margin-top: 20px;
+  }
