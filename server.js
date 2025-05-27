@@ -7,6 +7,7 @@ const Tesseract = require("tesseract.js");
 const axios = require("axios");
 const path = require("path");
 const { OpenAI } = require("openai");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -107,6 +108,46 @@ app.post("/solve-image", upload.single("image"), async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Error processing image.");
+  }
+});
+
+// GPT Vision Extraction Route
+app.post("/extract-gpt", upload.single("image"), async (req, res) => {
+  try {
+    const base64Image = req.file.buffer.toString("base64");
+    const imageDataUrl = `data:image/jpeg;base64,${base64Image}`;
+
+    const visionPrompt = [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Extract the math problem text from this image" },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      },
+    ];
+
+    const visionResponse = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: visionPrompt,
+      max_tokens: 500,
+    });
+
+    const extractedText = visionResponse.choices[0].message.content.trim();
+
+    const gptResult = await solveWithGPT(extractedText);
+    if (gptResult) return res.json({ extractedText, ...gptResult });
+
+    const wolframResult = await solveWithWolfram(extractedText);
+    if (wolframResult) return res.json({ extractedText, ...wolframResult });
+
+    const newtonResult = await solveWithNewton("simplify", extractedText);
+    if (newtonResult) return res.json({ extractedText, ...newtonResult });
+
+    res.status(500).send("Error solving extracted math.");
+  } catch (err) {
+    console.error("GPT Vision error:", err.message);
+    res.status(500).send("Vision model failed.");
   }
 });
 
