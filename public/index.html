@@ -41,6 +41,47 @@
             <div id="steps" class="steps-box"></div>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+
+        document.getElementById('solve-btn').addEventListener('click', async () => {
+            const problem = document.getElementById('math-input').value;
+            const res = await fetch('/solve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ problem })
+            });
+            const data = await res.json();
+            document.getElementById('result').innerText = data.extractedText || problem;
+            document.getElementById('steps').innerText = data.steps;
+        });
+
+        document.getElementById('image-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const res = await fetch('/extract-gpt', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            document.getElementById('image-preview').innerText = data.extractedText || "Image loaded.";
+            document.getElementById('result').innerText = data.extractedText;
+            document.getElementById('steps').innerText = data.steps;
+        });
+    </script>
 </body>
-</html>
+                </html>
