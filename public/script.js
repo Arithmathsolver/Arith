@@ -32,7 +32,7 @@ document.getElementById("image-input").addEventListener("change", async function
     resultDiv.textContent = "Processing image...";
     stepsDiv.textContent = "";
 
-    const response = await fetch("/solve-image", {
+    const response = await fetch("/extract-gpt", {
         method: "POST",
         body: formData,
     });
