@@ -33,6 +33,12 @@ header {
 h1 {
   color: var(--primary);
   margin-bottom: 10px;
+  font-size: 2rem;
+}
+
+p {
+  font-size: 1rem;
+  color: #555;
 }
 
 .solver-container {
@@ -58,28 +64,26 @@ textarea {
 }
 
 .or-divider {
+  display: flex;
+  align-items: center;
   text-align: center;
   margin: 15px 0;
   color: #6c757d;
-  position: relative;
 }
 
 .or-divider::before,
 .or-divider::after {
-  content: "";
+  content: '';
   flex: 1;
   border-bottom: 1px solid #ddd;
-  position: absolute;
-  top: 50%;
-  width: 45%;
 }
 
-.or-divider::before {
-  left: 0;
+.or-divider:not(:empty)::before {
+  margin-right: .75em;
 }
 
-.or-divider::after {
-  right: 0;
+.or-divider:not(:empty)::after {
+  margin-left: .75em;
 }
 
 .upload-container {
@@ -115,6 +119,7 @@ button {
   font-size: 16px;
   cursor: pointer;
   transition: background 0.3s;
+  margin-top: 10px;
 }
 
 button:hover {
@@ -132,6 +137,7 @@ button:disabled {
   border-radius: 8px;
   padding: 20px;
   position: relative;
+  background: #fff;
 }
 
 .loader {
@@ -152,10 +158,36 @@ button:disabled {
 
 #solutionOutput {
   font-size: 16px;
+  margin-top: 20px;
 }
 
 #solutionOutput img {
   max-width: 100%;
+}
+
+.math-block {
+  background: #f0f0f0;
+  padding: 10px;
+  margin: 10px 0;
+  font-family: monospace;
+  border-left: 3px solid var(--primary);
+}
+
+.math-inline {
+  font-family: monospace;
+  background: #e8f0ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.answer-box {
+  background: var(--success);
+  color: #000;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 6px;
+  margin-top: 15px;
 }
 
 /* Mobile styles */
@@ -163,12 +195,37 @@ button:disabled {
   .container {
     padding: 15px;
   }
-  
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
   .solver-container {
     padding: 15px;
   }
-  
+
   textarea {
     min-height: 100px;
+    font-size: 14px;
+  }
+
+  .upload-btn {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  button {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .math-block,
+  .math-inline {
+    font-size: 14px;
+  }
+
+  .solution-section {
+    padding: 15px;
   }
 }
