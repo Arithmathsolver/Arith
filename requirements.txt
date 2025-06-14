@@ -1,0 +1,7 @@
+tesseract-ocr==0.0.1
+pytesseract==0.3.10
+Pillow==10.0.0
+openai==0.28.0
+numpy==1.24.3
+python-dotenv==1.0.0
+Flask==2.3.2
