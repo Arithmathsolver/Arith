@@ -8,7 +8,7 @@ const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
 
-// ---------------------- Logger Setup ----------------------
+// Logger Setup
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -22,13 +22,12 @@ const logger = winston.createLogger({
   ]
 });
 
-// ------------------ Environment Check ---------------------
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
   process.exit(1);
 }
 
-// --------------------- Caching Setup ----------------------
+// Cache Setup
 const cache = new NodeCache({ stdTTL: 3600 });
 function getCacheKey(problem) {
   return `math_solution:${problem.trim().toLowerCase()}`;
@@ -45,7 +44,7 @@ async function getCachedSolution(problem, solverFn) {
   return solution;
 }
 
-// ----------------- Together AI Integration ----------------
+// AI Prompt and Model Config
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
 You are an expert mathematics tutor that solves problems from primary to university level.
@@ -57,38 +56,48 @@ Rules:
 5. Support: Arithmetic, Algebra, Calculus, Geometry, Statistics.
 `;
 
-async function solveMathProblem(problem) {
-  try {
-    return await getCachedSolution(problem, async () => {
-      const response = await axios.post(
-        TOGETHER_API_URL,
-        {
-          model: "deepseek-ai/DeepSeek-Math-7B",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: problem }
-          ],
-          temperature: 0.3,
-          max_tokens: 1500
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+const models = [
+  "mistralai/Mixtral-8x7B-Instruct-v0.1",
+  "meta-llama/Llama-3-8b-chat-hf"
+];
 
-      return response.data.choices[0].message.content;
-    });
-  } catch (error) {
-    const detail = error.response?.data || error.message;
-    logger.error('❌ Together AI Error:', detail);
-    throw new Error('Failed to get solution');
-  }
+async function tryModel(model, problem) {
+  logger.info(`🔍 Trying model: ${model}`);
+  const response = await axios.post(
+    TOGETHER_API_URL,
+    {
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: problem }
+      ],
+      temperature: 0.3,
+      max_tokens: 1500
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return response.data.choices[0].message.content;
 }
 
-// ----------------------- OCR Setup ------------------------
+async function solveMathProblem(problem) {
+  return await getCachedSolution(problem, async () => {
+    for (let model of models) {
+      try {
+        return await tryModel(model, problem);
+      } catch (err) {
+        logger.warn(`⚠️ Model ${model} failed: ${err.response?.data?.error?.message || err.message}`);
+      }
+    }
+    throw new Error('Failed to get solution from any model');
+  });
+}
+
+// OCR Processing
 async function extractTextFromImage(imageBuffer) {
   try {
     const worker = await createWorker();
@@ -103,26 +112,25 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
-// -------------------- Express App Setup -------------------
+// Express App Setup
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 
-// Serve frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ---------------------- API Routes ------------------------
+// API Routes
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
 
     if (req.files?.image) {
       problem = await extractTextFromImage(req.files.image.data);
-      logger.info(`🖼️ Extracted image text: ${problem.substring(0, 100)}...`);
+      logger.info(`🖼️ Extracted text: ${problem.substring(0, 100)}...`);
     }
 
     if (!problem) {
@@ -139,28 +147,15 @@ app.post('/api/solve', async (req, res) => {
 
 app.get('/check', async (req, res) => {
   try {
-    const response = await axios.post(
-      TOGETHER_API_URL,
-      {
-        model: "deepseek-ai/DeepSeek-Math-7B",
-        messages: [{ role: "user", content: "What is 2 + 2?" }]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    res.json({ ok: true, answer: response.data.choices[0].message.content });
+    const response = await tryModel(models[0], "What is 2 + 2?");
+    res.json({ ok: true, answer: response });
   } catch (err) {
     logger.error('❌ Check Endpoint Error:', err.response?.data || err.message);
     res.status(500).json({ ok: false, error: err.response?.data || err.message });
   }
 });
 
-// ---------------------- Start Server ----------------------
+// Start Server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
