@@ -1,161 +1,57 @@
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const multer = require("multer");
-const Tesseract = require("tesseract.js");
-const axios = require("axios");
-const path = require("path");
-const { OpenAI } = require("openai");
-const fs = require("fs");
-
-dotenv.config();
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const fileUpload = require('express-fileupload');
+const rateLimit = require('express-rate-limit');
+const { solveMathProblem } = require('./src/services/gpt4Service');
+const { extractTextFromImage } = require('./src/services/ocrService');
+const logger = require('./src/utils/logger');
 
 const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.'
+});
+
+// Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
-const upload = multer({ storage: multer.memoryStorage() });
+app.use(express.json({ limit: '10mb' }));
+app.use(fileUpload());
+app.use(limiter);
 
-const solveWithGPT = async (problem) => {
+// Routes
+app.post('/api/solve', async (req, res) => {
   try {
-    const prompt = `Solve this math problem with steps: ${problem}`;
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const steps = response.choices[0].message.content.trim();
-    return { provider: "gpt", steps };
-  } catch (err) {
-    console.error("GPT error:", err.message);
-    return null;
-  }
-};
-
-const solveWithWolfram = async (query) => {
-  try {
-    const response = await axios.get("https://api.wolframalpha.com/v2/query", {
-      params: {
-        input: query,
-        appid: process.env.WOLFRAM_APP_ID,
-        output: "JSON",
-        podstate: "Step-by-step solution",
-      },
-    });
-
-    const pods = response.data.queryresult.pods;
-    const stepPod = pods.find((pod) =>
-      pod.title.toLowerCase().includes("step-by-step")
-    );
-
-    if (stepPod) {
-      return { provider: "wolfram", steps: stepPod.subpods[0].plaintext };
-    } else {
-      return null;
+    let problem = req.body.problem;
+    
+    // Handle image upload
+    if (req.files?.image) {
+      const image = req.files.image;
+      problem = await extractTextFromImage(image.data);
+      logger.info(`Extracted text from image: ${problem}`);
     }
-  } catch (err) {
-    console.error("Wolfram error:", err.message);
-    return null;
-  }
-};
 
-const solveWithNewton = async (operation, expression) => {
-  try {
-    const url = `https://newton.now.sh/api/v2/${operation}/${encodeURIComponent(expression)}`;
-    const response = await axios.get(url);
-    return { provider: "newton", steps: response.data.result };
-  } catch (err) {
-    console.error("Newton error:", err.message);
-    return null;
-  }
-};
+    if (!problem) {
+      return res.status(400).json({ error: 'No problem provided' });
+    }
 
-app.post("/solve", async (req, res) => {
-  const { problem, operation, expression } = req.body;
-
-  const gptResult = await solveWithGPT(problem);
-  if (gptResult) return res.json(gptResult);
-
-  const wolframResult = await solveWithWolfram(problem);
-  if (wolframResult) return res.json(wolframResult);
-
-  const newtonResult = await solveWithNewton(operation, expression);
-  if (newtonResult) return res.json(newtonResult);
-
-  res.status(500).send("Failed to solve the problem.");
-});
-
-app.post("/solve-image", upload.single("image"), async (req, res) => {
-  const imageBuffer = req.file.buffer;
-
-  try {
-    const ocrResult = await Tesseract.recognize(imageBuffer, "eng");
-    const extractedText = ocrResult.data.text;
-
-    const gptResult = await solveWithGPT(extractedText);
-    if (gptResult) return res.json({ extractedText, ...gptResult });
-
-    const wolframResult = await solveWithWolfram(extractedText);
-    if (wolframResult) return res.json({ extractedText, ...wolframResult });
-
-    const newtonResult = await solveWithNewton("simplify", extractedText);
-    if (newtonResult) return res.json({ extractedText, ...newtonResult });
-
-    res.status(500).send("Error processing image.");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error processing image.");
+    const solution = await solveMathProblem(problem);
+    res.json({ problem, solution });
+  } catch (error) {
+    logger.error('Solution error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// GPT Vision Extraction Route
-app.post("/extract-gpt", upload.single("image"), async (req, res) => {
-  try {
-    const base64Image = req.file.buffer.toString("base64");
-    const imageDataUrl = `data:image/jpeg;base64,${base64Image}`;
-
-    const visionPrompt = [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "Extract the math problem text from this image" },
-          { type: "image_url", image_url: { url: imageDataUrl } },
-        ],
-      },
-    ];
-
-    const visionResponse = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
-      messages: visionPrompt,
-      max_tokens: 500,
-    });
-
-    const extractedText = visionResponse.choices[0].message.content.trim();
-
-    const gptResult = await solveWithGPT(extractedText);
-    if (gptResult) return res.json({ extractedText, ...gptResult });
-
-    const wolframResult = await solveWithWolfram(extractedText);
-    if (wolframResult) return res.json({ extractedText, ...wolframResult });
-
-    const newtonResult = await solveWithNewton("simplify", extractedText);
-    if (newtonResult) return res.json({ extractedText, ...newtonResult });
-
-    res.status(500).send("Error solving extracted math.");
-  } catch (err) {
-    console.error("GPT Vision error:", err.message);
-    res.status(500).send("Vision model failed.");
-  }
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });
