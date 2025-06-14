@@ -8,7 +8,7 @@ const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
 
-// Logger Setup
+// ---------------------- Logger Setup ----------------------
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -22,13 +22,13 @@ const logger = winston.createLogger({
   ]
 });
 
-// Check API Key
+// ------------------ Environment Check ---------------------
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
   process.exit(1);
 }
 
-// Cache Setup
+// --------------------- Caching Setup ----------------------
 const cache = new NodeCache({ stdTTL: 3600 });
 function getCacheKey(problem) {
   return `math_solution:${problem.trim().toLowerCase()}`;
@@ -45,7 +45,7 @@ async function getCachedSolution(problem, solverFn) {
   return solution;
 }
 
-// Together AI Math Solver
+// ----------------- Together AI Integration ----------------
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
 You are an expert mathematics tutor that solves problems from primary to university level.
@@ -63,7 +63,7 @@ async function solveMathProblem(problem) {
       const response = await axios.post(
         TOGETHER_API_URL,
         {
-          model: "deepseek-ai/DeepSeek-Math-7B", // or DeepSeek-R1 if preferred
+          model: "deepseek-ai/DeepSeek-Math-7B",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: problem }
@@ -88,7 +88,7 @@ async function solveMathProblem(problem) {
   }
 }
 
-// OCR Function
+// ----------------------- OCR Setup ------------------------
 async function extractTextFromImage(imageBuffer) {
   try {
     const worker = await createWorker();
@@ -103,26 +103,26 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
-// Express App Setup
+// -------------------- Express App Setup -------------------
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 
-// Serve Frontend
+// Serve frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// POST: Solve math problem
+// ---------------------- API Routes ------------------------
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
 
     if (req.files?.image) {
       problem = await extractTextFromImage(req.files.image.data);
-      logger.info(`🖼️ Extracted text from image: ${problem.substring(0, 100)}...`);
+      logger.info(`🖼️ Extracted image text: ${problem.substring(0, 100)}...`);
     }
 
     if (!problem) {
@@ -137,7 +137,6 @@ app.post('/api/solve', async (req, res) => {
   }
 });
 
-// GET: API health check
 app.get('/check', async (req, res) => {
   try {
     const response = await axios.post(
@@ -156,12 +155,12 @@ app.get('/check', async (req, res) => {
 
     res.json({ ok: true, answer: response.data.choices[0].message.content });
   } catch (err) {
-    logger.error('❌ Check endpoint error:', err.response?.data || err.message);
+    logger.error('❌ Check Endpoint Error:', err.response?.data || err.message);
     res.status(500).json({ ok: false, error: err.response?.data || err.message });
   }
 });
 
-// Start Server
+// ---------------------- Start Server ----------------------
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
