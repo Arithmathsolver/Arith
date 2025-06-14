@@ -1,87 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Math Solver</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Solver</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Advanced Math Problem Solver</h1>
-            <p>Solve arithmetic problems and word problems with step-by-step solutions</p>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="text">Text Input</button>
-            <button class="tab-btn" data-tab="image">Image Upload</button>
+  <div class="container">
+    <header>
+      <h1>Math Problem Solver</h1>
+      <p>From primary to university level</p>
+    </header>
+    
+    <main>
+      <div class="solver-container">
+        <div class="input-section">
+          <textarea id="problemInput" placeholder="Enter math problem..."></textarea>
+          <div class="or-divider">OR</div>
+          <div class="upload-container">
+            <input type="file" id="imageUpload" accept="image/*" capture="camera">
+            <label for="imageUpload" class="upload-btn">
+              <span>Upload Image</span>
+            </label>
+          </div>
+          <button id="solveBtn">Solve</button>
         </div>
-
-        <div id="text-tab" class="tab-content active">
-            <textarea id="math-input" placeholder="Enter math problem (e.g., '2+2' or 'what is 5 plus 3')"></textarea>
-            <button id="solve-btn" class="primary-btn">Solve</button>
+        
+        <div class="solution-section">
+          <div class="loader" id="loader"></div>
+          <div id="solutionOutput"></div>
         </div>
+      </div>
+    </main>
+  </div>
 
-        <div id="image-tab" class="tab-content">
-            <div class="upload-container">
-                <input type="file" id="image-input" accept="image/*">
-                <label for="image-input" class="upload-btn">
-                    Upload Math Problem Image
-                </label>
-                <div class="preview" id="image-preview"></div>
-            </div>
-        </div>
-
-        <div class="result-container">
-            <h2>Solution</h2>
-            <div id="result" class="result-box"></div>
-            <div class="steps-header">Step-by-Step Solution</div>
-            <div id="steps" class="steps-box"></div>
-        </div>
-    </div>
-
-    <script>
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                tabButtons.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(tab => tab.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
-            });
-        });
-
-        document.getElementById('solve-btn').addEventListener('click', async () => {
-            const problem = document.getElementById('math-input').value;
-            const res = await fetch('/solve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ problem })
-            });
-            const data = await res.json();
-            document.getElementById('result').innerText = data.extractedText || problem;
-            document.getElementById('steps').innerText = data.steps;
-        });
-
-        document.getElementById('image-input').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const res = await fetch('/extract-gpt', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await res.json();
-            document.getElementById('image-preview').innerText = data.extractedText || "Image loaded.";
-            document.getElementById('result').innerText = data.extractedText;
-            document.getElementById('steps').innerText = data.steps;
-        });
-    </script>
+  <script src="script.js"></script>
 </body>
-                </html>
+</html>
