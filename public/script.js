@@ -1,45 +1,77 @@
-document.getElementById("solve-btn").addEventListener("click", async () => {
-    const input = document.getElementById("math-input").value;
-    const resultDiv = document.getElementById("result");
-    const stepsDiv = document.getElementById("steps");
+document.addEventListener('DOMContentLoaded', () => {
+  const problemInput = document.getElementById('problemInput');
+  const imageUpload = document.getElementById('imageUpload');
+  const solveBtn = document.getElementById('solveBtn');
+  const solutionOutput = document.getElementById('solutionOutput');
+  const loader = document.getElementById('loader');
 
-    resultDiv.textContent = "Solving...";
-    stepsDiv.textContent = "";
+  solveBtn.addEventListener('click', solveProblem);
+  imageUpload.addEventListener('change', handleImageUpload);
 
-    const response = await fetch("/solve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problem: input }),
-    });
+  async function solveProblem() {
+    const problem = problemInput.value.trim();
+    
+    if (!problem && !imageUpload.files[0]) {
+      alert('Please enter a problem or upload an image');
+      return;
+    }
 
-    const data = await response.json();
+    try {
+      showLoading(true);
+      solutionOutput.innerHTML = '';
+      
+      const formData = new FormData();
+      if (problem) formData.append('problem', problem);
+      if (imageUpload.files[0]) formData.append('image', imageUpload.files[0]);
 
-    const [firstLine, ...rest] = data.steps.split('\n');
-    resultDiv.textContent = firstLine;
-    stepsDiv.textContent = rest.join('\n');
-});
+      const response = await fetch('/api/solve', {
+        method: 'POST',
+        body: formData
+      });
 
-document.getElementById("image-input").addEventListener("change", async function () {
-    const file = this.files[0];
-    if (!file) return;
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
 
-    const resultDiv = document.getElementById("result");
-    const stepsDiv = document.getElementById("steps");
+      const data = await response.json();
+      displaySolution(data);
+    } catch (error) {
+      console.error('Error:', error);
+      solutionOutput.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+    } finally {
+      showLoading(false);
+    }
+  }
 
-    const formData = new FormData();
-    formData.append("image", file);
+  function handleImageUpload() {
+    if (imageUpload.files[0]) {
+      problemInput.value = '';
+      solveBtn.click(); // Auto-submit on image upload
+    }
+  }
 
-    resultDiv.textContent = "Processing image...";
-    stepsDiv.textContent = "";
+  function displaySolution(data) {
+    let solutionHTML = `
+      <div class="original-problem">
+        <strong>Problem:</strong> ${data.problem}
+      </div>
+      <hr>
+      <div class="solution">${formatSolution(data.solution)}</div>
+    `;
+    solutionOutput.innerHTML = solutionHTML;
+  }
 
-    const response = await fetch("/extract-gpt", {
-        method: "POST",
-        body: formData,
-    });
+  function formatSolution(solution) {
+    // Simple Markdown/Latex formatting
+    return solution
+      .replace(/\$\$(.*?)\$\$/g, '<div class="math-block">$1</div>')
+      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
+      .replace(/\n/g, '<br>')
+      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>');
+  }
 
-    const data = await response.json();
-
-    const [firstLine, ...rest] = data.steps.split('\n');
-    resultDiv.textContent = firstLine;
-    stepsDiv.textContent = rest.join('\n');
+  function showLoading(show) {
+    loader.style.display = show ? 'block' : 'none';
+    solveBtn.disabled = show;
+  }
 });
