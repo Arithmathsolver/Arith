@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    ports:
+      - "3001:3001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OCR_ENGINE=tesseract
+      - CACHE_ENABLED=true
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3001/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  ocr-service:
+    image: tesseractshadow/tesseract4re
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
