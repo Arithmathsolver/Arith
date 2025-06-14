@@ -39,7 +39,7 @@ async function getCachedSolution(problem, solverFn) {
   return solution;
 }
 
-// GPT-4 Service
+// GPT-3.5 Service
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SYSTEM_PROMPT = `
 You are an expert mathematics tutor that solves problems from primary to university level.
@@ -55,7 +55,7 @@ async function solveMathProblem(problem) {
   try {
     return await getCachedSolution(problem, async () => {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: problem }
@@ -66,7 +66,7 @@ async function solveMathProblem(problem) {
       return response.choices[0].message.content;
     });
   } catch (error) {
-    logger.error(`GPT-4 Error: ${error.message}`);
+    logger.error(`GPT-3.5 Error: ${error.message}`);
     throw new Error('Failed to get solution');
   }
 }
