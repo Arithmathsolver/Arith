@@ -6,6 +6,7 @@ const { createWorker } = require('tesseract.js');
 const NodeCache = require('node-cache');
 const OpenAI = require('openai');
 const winston = require('winston');
+const path = require('path');
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -91,7 +92,15 @@ app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 
-// API Route
+// Serve Static Frontend Files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root Route for Frontend (avoid Cannot GET /)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Math Solver API
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
