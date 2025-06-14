@@ -1,38 +1,104 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const fileUpload = require('express-fileupload');
-const rateLimit = require('express-rate-limit');
-const { solveMathProblem } = require('./src/services/gpt4Service');
-const { extractTextFromImage } = require('./src/services/ocrService');
-const logger = require('./src/utils/logger');
+const cors = require('cors');
+const { createWorker } = require('tesseract.js');
+const NodeCache = require('node-cache');
+const OpenAI = require('openai');
+const winston = require('winston');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests, please try again later.'
+// Logger Setup
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' })
+  ]
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(fileUpload());
-app.use(limiter);
+// Cache Utility
+const cache = new NodeCache({ stdTTL: 3600 });
+function getCacheKey(problem) {
+  return `math_solution:${problem.trim().toLowerCase()}`;
+}
+async function getCachedSolution(problem, solverFn) {
+  const key = getCacheKey(problem);
+  const cached = cache.get(key);
+  if (cached) {
+    logger.info(`Using cached solution for: ${key.substring(0, 50)}...`);
+    return cached;
+  }
+  const solution = await solverFn();
+  cache.set(key, solution);
+  return solution;
+}
 
-// Routes
+// GPT-4 Service
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const SYSTEM_PROMPT = `
+You are an expert mathematics tutor that solves problems from primary to university level.
+Rules:
+1. Provide step-by-step solutions
+2. Use LaTeX for math expressions
+3. Highlight key concepts
+4. Box final answers: \\boxed{answer}
+5. Support: Arithmetic, Algebra, Calculus, Geometry, Statistics
+`;
+
+async function solveMathProblem(problem) {
+  try {
+    return await getCachedSolution(problem, async () => {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: problem }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500
+      });
+      return response.choices[0].message.content;
+    });
+  } catch (error) {
+    logger.error(`GPT-4 Error: ${error.message}`);
+    throw new Error('Failed to get solution');
+  }
+}
+
+// OCR Service
+async function extractTextFromImage(imageBuffer) {
+  try {
+    const worker = await createWorker();
+    await worker.loadLanguage('eng');
+    await worker.initialize('eng');
+    const { data: { text } } = await worker.recognize(imageBuffer);
+    await worker.terminate();
+    return text.trim();
+  } catch (error) {
+    logger.error(`OCR Error: ${error.message}`);
+    throw new Error('Failed to process image');
+  }
+}
+
+// Express App Setup
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(fileUpload());
+
+// API Route
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
-    
-    // Handle image upload
+
     if (req.files?.image) {
-      const image = req.files.image;
-      problem = await extractTextFromImage(image.data);
-      logger.info(`Extracted text from image: ${problem}`);
+      problem = await extractTextFromImage(req.files.image.data);
+      logger.info(`Extracted text from image: ${problem.substring(0, 100)}...`);
     }
 
     if (!problem) {
@@ -42,16 +108,14 @@ app.post('/api/solve', async (req, res) => {
     const solution = await solveMathProblem(problem);
     res.json({ problem, solution });
   } catch (error) {
-    logger.error('Solution error:', error);
+    logger.error(`API Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
+// Start Server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
