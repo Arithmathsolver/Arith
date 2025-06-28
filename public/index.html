@@ -11,6 +11,39 @@
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
+    /* Navigation styles */
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav a {
+      margin: 0 10px;
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    /* Article list styles */
+    .articles-list {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 15px;
+    }
+    .articles-list h2 {
+      text-align: center;
+    }
+    .articles-list a {
+      display: block;
+      padding: 8px 0;
+      color: #0066cc;
+      text-decoration: none;
+      border-bottom: 1px solid #ddd;
+    }
+    .articles-list a:hover {
+      text-decoration: underline;
+    }
   </style>
 
   <!-- Google AdSense Code -->
@@ -19,6 +52,15 @@
 </head>
 <body>
   <div class="container">
+    <!-- Navigation Menu -->
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="contact.html">Contact</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+
     <header>
       <h1>Math Problem Solver</h1>
       <p>From primary to university level</p>
@@ -38,7 +80,6 @@
 
           <!-- Image Upload -->
           <div class="upload-container">
-            <!-- capture removed below -->
             <input type="file" id="imageUpload" accept="image/*" />
             <label for="imageUpload" class="upload-btn">
               <span>Upload Image</span>
@@ -68,6 +109,21 @@
           <div id="solutionOutput"></div>
         </div>
       </section>
+
+      <!-- Articles List -->
+      <section class="articles-list">
+        <h2>Math Tutorials & Articles</h2>
+        <a href="articles/article1.html">How to Solve Quadratic Equations</a>
+        <a href="articles/article2.html">Introduction to Fractions</a>
+        <a href="articles/article3.html">Tips for Algebra Success</a>
+        <a href="articles/article4.html">Solving Word Problems Effectively</a>
+        <a href="articles/article5.html">Understanding Geometry Basics</a>
+        <a href="articles/article6.html">Graphing Linear Equations</a>
+        <a href="articles/article7.html">Introduction to Calculus</a>
+        <a href="articles/article8.html">Common Math Mistakes to Avoid</a>
+        <a href="articles/article9.html">How to Study for Math Exams</a>
+        <a href="articles/article10.html">Math Resources You Should Know</a>
+      </section>
     </main>
   </div>
 
@@ -82,4 +138,4 @@
 
   <script src="script.js"></script>
 </body>
-</html>
+  </html>
