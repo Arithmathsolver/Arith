@@ -59,10 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="solution">${formatSolution(data.solution)}</div>
     `;
     solutionOutput.innerHTML = solutionHTML;
+
+    // Scroll to solution output
+    solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
 
   function formatSolution(solution) {
-    // Simple Markdown/Latex formatting
     return solution
       .replace(/\$\$(.*?)\$\$/g, '<div class="math-block">$1</div>')
       .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
