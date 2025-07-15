@@ -70,28 +70,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatSolution(solution) {
+    if (!solution) return '';
+
     return solution
-      // First clean raw LaTeX commands
-      .replace(/\\log\b/g, 'log')
-      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
-      // Fix negative signs in formulas
-      .replace(/_{-/g, '_{')
-      // Convert operators
+      // Boxed answers to MathJax compatible
+      .replace(/\\boxed{(.*?)}/g, '\\fbox{$1}')
+      // Convert fractions
+      .replace(/\\frac{(.*?)}{(.*?)}/g, '\\frac{$1}{$2}')
+      // Handle align environments
+      .replace(/\\begin{align}(.*?)\\end{align}/gs, '\$1 \')
+      // Chemical formulas with mhchem package
+      .replace(/\\ce{(.*?)}/g, '\\ce{$1}')
+      // Operators
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      // Handle math blocks while preserving $ delimiters
-      .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
-      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-      // Final cleanup of remaining LaTeX artifacts
-      .replace(/\\(?=[^_])/g, '') // Remove standalone backslashes not followed by _
-      .replace(/\\_/g, '_')       // Fix escaped underscores
-      // Handle line breaks last
-      .replace(/\n/g, '<br>');
-  }
-
-  function showLoading(show) {
-    loader.style.display = show ? 'block' : 'none';
-    solveBtn.disabled = show;
-  }
-});
+      .replace(/\\log\b/g, 'log')
+      // Remove stray backslashes
+      .replace(/\
