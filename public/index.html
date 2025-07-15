@@ -47,7 +47,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6895923831772224" 
      crossorigin="anonymous"></script>
 
-  <!-- MathJax Configuration -->
+  <!-- Corrected MathJax Configuration -->
   <script>
     window.MathJax = {
       tex: {
@@ -159,8 +159,9 @@
     <a href="copyright.html">Copyright</a>
   </footer>
 
-  <!-- Script to Render MathJax After Dynamic Content Loads -->
+  <!-- Scripts -->
   <script src="script.js"></script>
+  <script src="math-render.js"></script>
   <script>
     // Optional: Re-render MathJax after new content is added dynamically
     function renderMath() {
@@ -169,13 +170,13 @@
       }
     }
 
-    // Example: After inserting response into #solutionOutput
+    // Trigger rendering after solving
     const solveBtn = document.getElementById('solveBtn');
     solveBtn.addEventListener('click', () => {
       setTimeout(() => {
-        renderMath();  // Call this after your backend inserts math content
+        renderMath();
       }, 500);
     });
   </script>
 </body>
-            </html>
+        </html>
