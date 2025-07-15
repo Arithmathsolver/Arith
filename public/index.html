@@ -6,12 +6,10 @@
   <title>Math Solver</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Ensure better text rendering and touch responsiveness */
     html {
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
-    /* Navigation styles */
     nav {
       text-align: center;
       margin-bottom: 20px;
@@ -25,7 +23,6 @@
     nav a:hover {
       text-decoration: underline;
     }
-    /* Article list styles */
     .articles-list {
       max-width: 800px;
       margin: 30px auto;
@@ -55,18 +52,10 @@
     window.MathJax = {
       tex: {
         packages: {'[+]': ['base', 'ams', 'mhchem']},
-        inlineMath: [['\\(', '\\)']],
-        displayMath: [['\\[', '\\]']],
-        processEscapes: false, // Changed to false to prevent backslash issues
-        processEnvironments: true,
-        macros: {
-          '\\times': '\\text{×}',
-          '\\div': '\\text{÷}',
-          '\\plus': '\\mathord{+}',
-          '\\minus': '\\mathord{-}',
-          '\\log': '\\mathop{\\mathrm{log}}\\nolimits',
-          '\\boxed': '\\fbox{##1}'
-        }
+        inlineMath: [['\', '\']],
+        displayMath: [['\', '\']],
+        processEscapes: false,
+        processEnvironments: true
       },
       options: {
         skipHtmlTags: {'[-]': ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
@@ -100,16 +89,12 @@
     <main>
       <section class="solver-container">
         <div class="input-section">
-          <!-- Hidden label for accessibility -->
           <label for="problemInput" style="display: none;">Enter your math problem</label>
 
-          <!-- Problem Textarea -->
           <textarea id="problemInput" placeholder="Enter math problem..."></textarea>
 
-          <!-- OR Divider -->
           <div class="or-divider">OR</div>
 
-          <!-- Image Upload -->
           <div class="upload-container">
             <input type="file" id="imageUpload" accept="image/*" />
             <label for="imageUpload" class="upload-btn">
@@ -117,10 +102,8 @@
             </label>
           </div>
 
-          <!-- Solve Button -->
           <button id="solveBtn">Solve</button>
 
-          <!-- Google AdSense Ad Below Button -->
           <div style="margin-top: 20px; text-align: center;">
             <ins class="adsbygoogle"
                  style="display:block"
@@ -134,14 +117,12 @@
           </div>
         </div>
 
-        <!-- Solution Output -->
         <div class="solution-section">
           <div class="loader" id="loader"></div>
           <div id="solutionOutput"></div>
         </div>
       </section>
 
-      <!-- Articles List -->
       <section class="articles-list">
         <h2>Math Tutorials & Articles</h2>
         <a href="articles/article1.html">How to Solve Quadratic Equations</a>
@@ -168,5 +149,23 @@
   </footer>
 
   <script src="script.js"></script>
+
+  <!-- Add this script for cleaning and rendering -->
+  <script>
+    function cleanLatex(input) {
+      return input.replace(/\?![a-zA-Z])/g, '');
+    }
+
+    function renderSolution(rawAnswer) {
+      const cleaned = cleanLatex(rawAnswer);
+      document.getElementById('solutionOutput').innerHTML = cleaned;
+      if (window.MathJax) {
+        MathJax.typesetPromise();
+      }
+    }
+
+    // Example usage:
+    // renderSolution('\\boxed{\\frac{3}{4}} \\ H_2O \\begin{align} x + y &= z \\end{align}');
+  </script>
 </body>
-  </html>
+                                                                           </html>
