@@ -50,28 +50,38 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6895923831772224" 
      crossorigin="anonymous"></script>
 
-  <!-- MathJax for LaTeX and Chemistry formulas -->
+  <!-- Updated MathJax Configuration -->
   <script>
     window.MathJax = {
       tex: {
         packages: {'[+]': ['base', 'ams', 'mhchem']},
         inlineMath: [['\\(', '\\)']],
         displayMath: [['\\[', '\\]']],
-        processEscapes: true,
+        processEscapes: false, // Changed to false to prevent backslash issues
+        processEnvironments: true,
         macros: {
           '\\times': '\\text{×}',
           '\\div': '\\text{÷}',
-          '\\plus': '+',
-          '\\minus': '-'
+          '\\plus': '\\mathord{+}',
+          '\\minus': '\\mathord{-}',
+          '\\log': '\\mathop{\\mathrm{log}}\\nolimits',
+          '\\boxed': '\\fbox{##1}'
         }
       },
-      loader: { load: ['[tex]/ams', '[tex]/mhchem'] }
+      options: {
+        skipHtmlTags: {'[-]': ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        ignoreHtmlClass: 'tex2jax_ignore'
+      },
+      loader: {
+        load: ['[tex]/ams', '[tex]/mhchem']
+      }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
 </head>
 <body>
+  <!-- [Rest of your HTML remains EXACTLY the same] -->
   <div class="container">
     <!-- Navigation Menu -->
     <nav>
