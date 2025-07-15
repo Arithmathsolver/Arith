@@ -54,10 +54,18 @@
   <script>
     window.MathJax = {
       tex: {
-        packages: {'[+]': ['mhchem']},
-        inlineMath: [['$', '$'], ['\', '\']],
-        displayMath: [['$$', '$$'], ['\', '\']]
-      }
+        packages: {'[+]': ['base', 'ams', 'mhchem']},
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true,
+        macros: {
+          '\\times': '\\text{×}',
+          '\\div': '\\text{÷}',
+          '\\plus': '+',
+          '\\minus': '-'
+        }
+      },
+      loader: { load: ['[tex]/ams', '[tex]/mhchem'] }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
