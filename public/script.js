@@ -71,10 +71,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function formatSolution(solution) {
     return solution
-      .replace(/\$\$(.*?)\$\$/g, '<div class="math-block">$1</div>')
+      // Convert symbols first
+      .replace(/\*/g, '×')
+      .replace(/\\times/g, '×')
+      .replace(/\\div/g, '÷')
+      // Clean LaTeX artifacts
+      .replace(/\\begin\{.*?\}/g, '')
+      .replace(/\\end\{.*?\}/g, '')
+      .replace(/\\quad/g, ' ')
+      .replace(/\\text\{/g, '')
+      .replace(/\}/g, '')
+      // Preserve LaTeX math blocks
+      .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
       .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-      .replace(/\n/g, '<br>')
-      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>');
+      // Format boxed answers
+      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
+      // Handle line breaks
+      .replace(/\n/g, '<br>');
   }
 
   function showLoading(show) {
