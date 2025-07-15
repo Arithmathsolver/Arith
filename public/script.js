@@ -71,22 +71,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function formatSolution(solution) {
     return solution
-      // Convert symbols first
+      // First clean raw LaTeX commands
+      .replace(/\\log\b/g, 'log')
+      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
+      // Fix negative signs in formulas
+      .replace(/_{-/g, '_{')
+      // Convert operators
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      // Clean LaTeX artifacts
-      .replace(/\\begin\{.*?\}/g, '')
-      .replace(/\\end\{.*?\}/g, '')
-      .replace(/\\quad/g, ' ')
-      .replace(/\\text\{/g, '')
-      .replace(/\}/g, '')
-      // Preserve LaTeX math blocks
+      // Handle math blocks while preserving $ delimiters
       .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
       .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-      // Format boxed answers
-      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
-      // Handle line breaks
+      // Final cleanup of remaining LaTeX artifacts
+      .replace(/\\(?=[^_])/g, '') // Remove standalone backslashes not followed by _
+      .replace(/\\_/g, '_')       // Fix escaped underscores
+      // Handle line breaks last
       .replace(/\n/g, '<br>');
   }
 
