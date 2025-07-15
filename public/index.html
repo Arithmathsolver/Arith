@@ -6,12 +6,10 @@
   <title>Math Solver</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Ensure better text rendering and touch responsiveness */
     html {
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
-    /* Navigation styles */
     nav {
       text-align: center;
       margin-bottom: 20px;
@@ -25,7 +23,6 @@
     nav a:hover {
       text-decoration: underline;
     }
-    /* Article list styles */
     .articles-list {
       max-width: 800px;
       margin: 30px auto;
@@ -50,14 +47,14 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6895923831772224" 
      crossorigin="anonymous"></script>
 
-  <!-- MathJax for LaTeX and Chemistry formulas -->
+  <!-- MathJax Configuration -->
   <script>
     window.MathJax = {
       tex: {
-        packages: {'[+]': ['base', 'ams', 'mhchem']},
-        inlineMath: [['\\(', '\\)']],
-        displayMath: [['\\[', '\\]']],
+        inlineMath: [['\', '\']],
+        displayMath: [['\', '\']],
         processEscapes: true,
+        packages: { '[+]': ['base', 'ams', 'mhchem'] },
         macros: {
           '\\times': '\\text{×}',
           '\\div': '\\text{÷}',
@@ -65,12 +62,17 @@
           '\\minus': '-'
         }
       },
-      loader: { load: ['[tex]/ams', '[tex]/mhchem'] }
+      loader: { load: ['[tex]/ams', '[tex]/mhchem'] },
+      options: {
+        renderActions: {
+          addMenu: []
+        }
+      }
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
+
 <body>
   <div class="container">
     <!-- Navigation Menu -->
@@ -157,6 +159,23 @@
     <a href="copyright.html">Copyright</a>
   </footer>
 
+  <!-- Script to Render MathJax After Dynamic Content Loads -->
   <script src="script.js"></script>
+  <script>
+    // Optional: Re-render MathJax after new content is added dynamically
+    function renderMath() {
+      if (window.MathJax && window.MathJax.typeset) {
+        MathJax.typeset();
+      }
+    }
+
+    // Example: After inserting response into #solutionOutput
+    const solveBtn = document.getElementById('solveBtn');
+    solveBtn.addEventListener('click', () => {
+      setTimeout(() => {
+        renderMath();  // Call this after your backend inserts math content
+      }, 500);
+    });
+  </script>
 </body>
-  </html>
+            </html>
