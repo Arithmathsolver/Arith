@@ -60,6 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     solutionOutput.innerHTML = solutionHTML;
 
+    // Render MathJax for any LaTeX in the solution
+    if (window.MathJax) {
+      MathJax.typesetPromise();
+    }
+
     // Scroll to solution output
     solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
