@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function solveProblem() {
     const problem = problemInput.value.trim();
-    
+
     if (!problem && !imageUpload.files[0]) {
       alert('Please enter a problem or upload an image');
       return;
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       showLoading(true);
       solutionOutput.innerHTML = '';
-      
+
       const formData = new FormData();
       if (problem) formData.append('problem', problem);
       if (imageUpload.files[0]) formData.append('image', imageUpload.files[0]);
@@ -60,34 +60,33 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     solutionOutput.innerHTML = solutionHTML;
 
+    // Render MathJax for any LaTeX in the solution
     if (window.MathJax) {
       MathJax.typesetPromise();
     }
 
+    // Scroll to solution output
     solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
 
   function formatSolution(solution) {
     return solution
-      // Format powers: convert x^2 and x^(n+1) to x^{2} or x^{n+1}
+      // Format powers: convert x^2 or x^(n+1) to LaTeX exponent x^{...}
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, '$1^{\$2}')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9])/g, '$1^{\$2}')
       // First clean raw LaTeX commands
       .replace(/\\log\b/g, 'log')
       .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
-      // Fix negative signs in formulas
       .replace(/_{-/g, '_{')
-      // Convert operators
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
       // Handle math blocks while preserving $ delimiters
       .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
-      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
+      .replace(/\$(.*?)\$/g, '<span class="math-inline">\$1</span>')
       // Final cleanup of remaining LaTeX artifacts
       .replace(/\\(?=[^_])/g, '') // Remove standalone backslashes not followed by _
       .replace(/\\_/g, '_')       // Fix escaped underscores
-      // Handle line breaks last
       .replace(/\n/g, '<br>');
   }
 
