@@ -60,33 +60,33 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     solutionOutput.innerHTML = solutionHTML;
 
-    // Render MathJax for any LaTeX in the solution
     if (window.MathJax) {
       MathJax.typesetPromise();
     }
 
-    // Scroll to solution output
     solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
 
   function formatSolution(solution) {
     return solution
-      // Format powers: convert x^2 or x^(n+1) to LaTeX exponent x^{...}
+      // Powers formatting: convert ^ to LaTeX superscript
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, '$1^{\$2}')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9])/g, '$1^{\$2}')
-      // First clean raw LaTeX commands
+      // Clean raw LaTeX commands
       .replace(/\\log\b/g, 'log')
       .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
+      // Fix negative signs
       .replace(/_{-/g, '_{')
+      // Convert operators
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      // Handle math blocks while preserving $ delimiters
+      // Handle math blocks
       .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
-      .replace(/\$(.*?)\$/g, '<span class="math-inline">\$1</span>')
-      // Final cleanup of remaining LaTeX artifacts
-      .replace(/\\(?=[^_])/g, '') // Remove standalone backslashes not followed by _
-      .replace(/\\_/g, '_')       // Fix escaped underscores
+      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
+      // Remove standalone backslashes not followed by _
+      .replace(/\\(?=[^_])/g, '')
+      .replace(/\\_/g, '_')
       .replace(/\n/g, '<br>');
   }
 
