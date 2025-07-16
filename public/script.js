@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function formatSolution(solution) {
     return solution
-      // Convert powers: x^2 => x^{2} and x^(n+1) => x^{n+1}
+      // Format powers: convert x^2 and x^(n+1) to x^{2} or x^{n+1}
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, '$1^{\$2}')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9])/g, '$1^{\$2}')
       // First clean raw LaTeX commands
