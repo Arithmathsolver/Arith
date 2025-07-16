@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleImageUpload() {
     if (imageUpload.files[0]) {
       problemInput.value = '';
-      solveBtn.click();
+      solveBtn.click(); // Auto-submit on image upload
     }
   }
 
@@ -83,12 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     return solution
-      // Powers formatting
+      // Superscript formatting for powers
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
-      .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
-      // Clean raw LaTeX commands
+      // Keep other replacements unchanged
       .replace(/\\log\b/g, 'log')
       .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
       .replace(/_{-/g, '_{')
