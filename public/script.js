@@ -68,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatSolution(solution) {
-    // helper to convert digits and symbols to superscript
     function toSuperscript(text) {
       const superscriptMap = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -84,10 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     return solution
+      // Powers formatting
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
+      // Clean raw LaTeX commands
       .replace(/\\log\b/g, 'log')
       .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
       .replace(/_{-/g, '_{')
