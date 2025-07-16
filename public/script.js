@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleImageUpload() {
     if (imageUpload.files[0]) {
       problemInput.value = '';
-      solveBtn.click(); // Auto-submit on image upload
+      solveBtn.click();
     }
   }
 
@@ -68,23 +68,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatSolution(solution) {
+    // helper to convert digits and symbols to superscript
+    function toSuperscript(text) {
+      const superscriptMap = {
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ',
+        'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ᶦ', 'j': 'ʲ',
+        'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ',
+        'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ',
+        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ',
+        '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾'
+      };
+      return text.split('').map(c => superscriptMap[c] || c).join('');
+    }
+
     return solution
-      // Powers formatting: convert ^ to LaTeX superscript
-      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, '$1^{\$2}')
-      .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9])/g, '$1^{\$2}')
-      // Clean raw LaTeX commands
+      .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
+      .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
+      .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/\\log\b/g, 'log')
       .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
-      // Fix negative signs
       .replace(/_{-/g, '_{')
-      // Convert operators
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      // Handle math blocks
       .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
       .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-      // Remove standalone backslashes not followed by _
       .replace(/\\(?=[^_])/g, '')
       .replace(/\\_/g, '_')
       .replace(/\n/g, '<br>');
