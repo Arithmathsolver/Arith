@@ -168,9 +168,7 @@ button:disabled {
   max-width: 100%;
 }
 
-/* ================== */
-/* Enhanced Math Styles */
-/* ================== */
+/* MathJax and Math Styles */
 .MathJax {
   outline: 0;
 }
@@ -216,19 +214,61 @@ button:disabled {
   display: inline-block;
 }
 
-/* Fractions and complex math */
-mjx-frac, .MathJax .mjx-frac {
+/* Logarithm formatting */
+.log-format {
+  position: relative;
   display: inline-block;
+  margin: 0 2px;
+  vertical-align: middle;
+}
+
+.log-body {
+  display: inline-block;
+  font-size: 1em;
+}
+
+.log-base {
+  position: absolute;
+  font-size: 0.7em;
+  bottom: -0.5em;
+  left: 0.5em;
+  color: var(--dark);
+}
+
+/* Fraction formatting */
+.frac {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  text-align: center;
   margin: 0 3px;
 }
 
-.MathJax span {
-  vertical-align: middle;
+.numerator {
+  display: block;
+  padding: 0 0.2em;
+  border-bottom: 1px solid var(--dark);
+  font-size: 0.9em;
+}
+
+.denominator {
+  display: block;
+  padding: 0 0.2em;
+  font-size: 0.9em;
 }
 
 /* Chemical formulas */
 mjx-mi[mathvariant="normal"] {
   font-style: normal;
+}
+
+/* Image preview */
+.uploaded-image {
+  max-width: 100%;
+  max-height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 10px 0;
 }
 
 /* Mobile responsiveness */
@@ -285,4 +325,14 @@ mjx-mi[mathvariant="normal"] {
     padding: 10px;
     white-space: normal;
   }
-    }
+
+  .log-base {
+    font-size: 0.6em;
+    bottom: -0.4em;
+  }
+
+  .numerator,
+  .denominator {
+    font-size: 0.8em;
+  }
+}
