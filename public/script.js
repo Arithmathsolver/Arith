@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       displaySolution(data);
+      clearInputs(); // clear after displaying solution
     } catch (error) {
       console.error('Error:', error);
       solutionOutput.innerHTML = `<div class="error">Error: ${error.message}</div>`;
@@ -68,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatSolution(solution) {
-    // helper to convert digits and symbols to superscript
     function toSuperscript(text) {
       const superscriptMap = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -83,9 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return text.split('').map(c => superscriptMap[c] || c).join('');
     }
 
-    // First pass: Remove all LaTeX artifacts and formatting
     let cleanSolution = solution
-      // Remove LaTeX boxes and commands
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\\begin\{[^}]+\}/g, '')
       .replace(/\\end\{[^}]+\}/g, '')
@@ -96,8 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\neq/g, '≠')
       .replace(/\\left/g, '')
       .replace(/\\right/g, '')
-      
-      // Clean up remaining LaTeX syntax
       .replace(/\\([^_])/g, '$1')
       .replace(/\\_/g, '_')
       .replace(/\$\$/g, '')
@@ -108,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\\(/g, '(')
       .replace(/\\\)/g, ')');
 
-    // Second pass: Apply formatting while preserving clean text
     return cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
@@ -127,5 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoading(show) {
     loader.style.display = show ? 'block' : 'none';
     solveBtn.disabled = show;
+  }
+
+  function clearInputs() {
+    problemInput.value = '';
+    imageUpload.value = '';
   }
 });
