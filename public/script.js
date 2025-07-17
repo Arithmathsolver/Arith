@@ -83,26 +83,44 @@ document.addEventListener('DOMContentLoaded', () => {
       return text.split('').map(c => superscriptMap[c] || c).join('');
     }
 
-    return solution
-      // First clean up boxed/oxyed artifacts
-      .replace(/\\boxed\{(.*?)\}/g, '$1')
-      .replace(/\\oxyed\{(.*?)\}/g, '$1')
+    // First pass: Remove all LaTeX artifacts and formatting
+    let cleanSolution = solution
+      // Remove LaTeX boxes and commands
+      .replace(/\\boxed\{([^}]*)\}/g, '$1')
+      .replace(/\\begin\{[^}]+\}/g, '')
+      .replace(/\\end\{[^}]+\}/g, '')
+      .replace(/\\align/g, '')
+      .replace(/\\,/g, ' ')
+      .replace(/\\approx/g, '≈')
+      .replace(/\\forall/g, 'for all')
+      .replace(/\\neq/g, '≠')
+      .replace(/\\left/g, '')
+      .replace(/\\right/g, '')
       
-      // Then apply all other formatting as before
+      // Clean up remaining LaTeX syntax
+      .replace(/\\([^_])/g, '$1')
+      .replace(/\\_/g, '_')
+      .replace(/\$\$/g, '')
+      .replace(/\\\[/g, '')
+      .replace(/\\\]/g, '')
+      .replace(/\{/g, '')
+      .replace(/\}/g, '')
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')');
+
+    // Second pass: Apply formatting while preserving clean text
+    return cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/\\log_(\d+)/g, 'log<sub>$1</sub>')
+      .replace(/\\log_([a-z])/g, 'log<sub>$1</sub>')
       .replace(/\\log\b/g, 'log')
       .replace(/_{-/g, '_{')
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      .replace(/\$\$(.*?)\$\$/g, '<div class="math-display">$$$1$$</div>')
-      .replace(/\$(.*?)\$/g, '<span class="math-inline">$1</span>')
-      .replace(/\\(?=[^_])/g, '')
-      .replace(/\\_/g, '_')
       .replace(/\n/g, '<br>');
   }
 
