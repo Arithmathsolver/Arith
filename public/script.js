@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const solveBtn = document.getElementById('solveBtn');
   const solutionOutput = document.getElementById('solutionOutput');
   const loader = document.getElementById('loader');
+  const imagePreview = document.getElementById('imagePreview'); // Add this element in your HTML
 
   solveBtn.addEventListener('click', solveProblem);
   imageUpload.addEventListener('change', handleImageUpload);
@@ -35,7 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       displaySolution(data);
-      clearInputs(); // clear after displaying solution
+      
+      // Clear inputs after successful solution
+      clearInputs();
+      
     } catch (error) {
       console.error('Error:', error);
       solutionOutput.innerHTML = `<div class="error">Error: ${error.message}</div>`;
@@ -46,15 +50,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleImageUpload() {
     if (imageUpload.files[0]) {
+      // Display image preview
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        imagePreview.innerHTML = `<img src="${e.target.result}" class="uploaded-image">`;
+        imagePreview.style.display = 'block';
+      };
+      reader.readAsDataURL(imageUpload.files[0]);
+      
+      // Clear problem input if image is uploaded
       problemInput.value = '';
-      solveBtn.click();
     }
+    solveBtn.click();
   }
 
   function displaySolution(data) {
     let solutionHTML = `
       <div class="original-problem">
-        <strong>Problem:</strong> ${data.problem}
+        <strong>Problem:</strong> ${data.problem || 'Image-based problem'}
       </div>
       <hr>
       <div class="solution">${formatSolution(data.solution)}</div>
@@ -68,7 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
     solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
 
+  function clearInputs() {
+    // Clear text input
+    problemInput.value = '';
+    
+    // Clear file input and preview
+    imageUpload.value = '';
+    imagePreview.innerHTML = '';
+    imagePreview.style.display = 'none';
+  }
+
   function formatSolution(solution) {
+    // helper to convert digits and symbols to superscript
     function toSuperscript(text) {
       const superscriptMap = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -83,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return text.split('').map(c => superscriptMap[c] || c).join('');
     }
 
+    // First pass: Clean LaTeX artifacts
     let cleanSolution = solution
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\\begin\{[^}]+\}/g, '')
@@ -104,14 +129,23 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\\(/g, '(')
       .replace(/\\\)/g, ')');
 
+    // Enhanced logarithm formatting
+    cleanSolution = cleanSolution
+      .replace(/\\log_(\d+|\\?[a-z])\(([^)]+)\)/g, 
+        '<span class="log-format"><span class="log-body">log</span><span class="log-base">$1</span>($2)</span>')
+      .replace(/\\log\(([^)]+)\)/g, 'log($1)');
+
+    // Enhanced fraction formatting
+    cleanSolution = cleanSolution
+      .replace(/([^\\])\\frac\{([^}]+)\}\{([^}]+)\}/g, 
+        '<span class="frac"><span class="numerator">$2</span><span class="denominator">$3</span></span>');
+
+    // Second pass: Apply other formatting
     return cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/\\log_(\d+)/g, 'log<sub>$1</sub>')
-      .replace(/\\log_([a-z])/g, 'log<sub>$1</sub>')
-      .replace(/\\log\b/g, 'log')
       .replace(/_{-/g, '_{')
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
@@ -122,10 +156,5 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoading(show) {
     loader.style.display = show ? 'block' : 'none';
     solveBtn.disabled = show;
-  }
-
-  function clearInputs() {
-    problemInput.value = '';
-    imageUpload.value = '';
   }
 });
