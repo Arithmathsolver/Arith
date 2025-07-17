@@ -84,12 +84,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     return solution
+      // First clean up boxed/oxyed artifacts
+      .replace(/\\boxed\{(.*?)\}/g, '$1')
+      .replace(/\\oxyed\{(.*?)\}/g, '$1')
+      
+      // Then apply all other formatting as before
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/\\log_(\d+)/g, 'log<sub>$1</sub>')
       .replace(/\\log\b/g, 'log')
-      .replace(/\\boxed{(.*?)}/g, '<div class="answer-box">$1</div>')
       .replace(/_{-/g, '_{')
       .replace(/\*/g, '×')
       .replace(/\\times/g, '×')
