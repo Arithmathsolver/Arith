@@ -22,6 +22,7 @@ const logger = winston.createLogger({
   ]
 });
 
+// Validate API Key
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
   process.exit(1);
@@ -97,41 +98,70 @@ async function solveMathProblem(problem) {
   });
 }
 
-// OCR Processing with Mathpix + fallback to Tesseract
-async function extractTextFromImage(imageBuffer) {
-  // Try Mathpix OCR first
-  try {
-    const mathpixResponse = await axios.post('https://api.mathpix.com/v3/text', {
-      src: `data:image/png;base64,${imageBuffer.toString('base64')}`,
-      formats: ['text']
-    }, {
+// --- Post-Processing Logic ---
+function postProcessMathText(text) {
+  return text
+    .replace(/\bV\b/g, '√')
+    .replace(/\bpi\b/gi, 'π')
+    .replace(/n\s*=\s*\d+/gi, 'π')
+    .replace(/O/g, '0')
+    .replace(/l/g, '1')
+    .replace(/\/\s*/g, '/')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+async function refineMathTextWithAI(rawText) {
+  const prompt = `
+You are an OCR correction AI. The following text is OCR'd from a math image, but some symbols may be wrong. Fix common math OCR errors like replacing V with √, n with π, O with 0, l with 1.
+
+Original OCR text:
+${rawText}
+
+Return the cleaned and corrected math expression only, no explanations.
+`;
+
+  const response = await axios.post(
+    TOGETHER_API_URL,
+    {
+      model: "meta-llama/Llama-3-8b-chat-hf",
+      messages: [
+        { role: "system", content: prompt }
+      ],
+      temperature: 0,
+      max_tokens: 300
+    },
+    {
       headers: {
-        'app_id': process.env.MATHPIX_APP_ID,
-        'app_key': process.env.MATHPIX_APP_KEY,
+        Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
         'Content-Type': 'application/json'
       }
-    });
-
-    if (mathpixResponse.data.text) {
-      logger.info('✅ Mathpix OCR succeeded');
-      return mathpixResponse.data.text.trim();
     }
-  } catch (error) {
-    logger.warn(`⚠️ Mathpix OCR failed: ${error.message}`);
-  }
+  );
 
-  // Fallback to Tesseract if Mathpix fails
+  return response.data.choices[0].message.content.trim();
+}
+
+// --- OCR Processing ---
+async function extractTextFromImage(imageBuffer) {
   try {
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();
-    logger.info('✅ Fallback Tesseract OCR succeeded');
-    return text.trim();
+
+    const postProcessed = postProcessMathText(text);
+    const refined = await refineMathTextWithAI(postProcessed);
+
+    logger.info(`🖼️ OCR Raw: ${text}`);
+    logger.info(`🔍 Post-Processed: ${postProcessed}`);
+    logger.info(`🤖 AI Refined: ${refined}`);
+
+    return refined;
   } catch (error) {
-    logger.error(`❌ Tesseract OCR Error: ${error.message}`);
-    throw new Error('Failed to process image via OCR');
+    logger.error(`❌ OCR Error: ${error.message}`);
+    throw new Error('Failed to process image');
   }
 }
 
@@ -140,8 +170,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
-
-// Serve everything in public/ (including articles folder inside public)
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -155,7 +183,7 @@ app.post('/api/solve', async (req, res) => {
 
     if (req.files?.image) {
       problem = await extractTextFromImage(req.files.image.data);
-      logger.info(`🖼️ Extracted text: ${problem.substring(0, 100)}...`);
+      logger.info(`🖼️ Final OCR-processed text: ${problem}`);
     }
 
     if (!problem) {
