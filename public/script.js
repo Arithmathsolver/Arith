@@ -87,13 +87,24 @@ document.addEventListener('DOMContentLoaded', () => {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
         '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
         'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ',
-        'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ᶦ', 'j': 'ʲ',
+        'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ⁱ', 'j': 'ʲ',
         'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ',
         'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ',
-        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ',
-        '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾'
+        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ'
       };
       return text.split('').map(c => superscriptMap[c] || c).join('');
+    }
+
+    function toSubscript(text) {
+      const subscriptMap = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+        'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ', 'i': 'ᵢ', 'j': 'ⱼ',
+        'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ', 'o': 'ₒ',
+        'p': 'ₚ', 'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ',
+        'v': 'ᵥ', 'x': 'ₓ'
+      };
+      return text.split('').map(c => subscriptMap[c] || c).join('');
     }
 
     let cleanSolution = solution
@@ -102,22 +113,49 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
       .replace(/boxed|oxed/gi, '')
-      .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1 / $2)')
-      .replace(/\\sqrt\{([^}]*)\}/g, 'sqrt($1)')
+
+      .replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
+      .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
+      .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
+
+      .replace(/\\alpha/g, 'α')
+      .replace(/\\beta/g, 'β')
+      .replace(/\\gamma/g, 'γ')
+      .replace(/\\delta/g, 'δ')
+      .replace(/\\theta/g, 'θ')
       .replace(/\\pi/g, 'π')
+      .replace(/\\sigma/g, 'σ')
+      .replace(/\\omega/g, 'ω')
+      .replace(/\\Delta/g, 'Δ')
+      .replace(/\\Sigma/g, 'Σ')
+
+      .replace(/\\geq/g, '≥')
+      .replace(/\\leq/g, '≤')
+      .replace(/\\neq/g, '≠')
+      .replace(/\\approx/g, '≈')
+
+      .replace(/\\sum_{([^}]+)}\^({([^}]+)}|(\w))/g, 'Sum $1 to $3$4')
+      .replace(/\\int_{([^}]+)}\^{([^}]+)}/g, 'Integral from $1 to $2')
+      .replace(/\\partial/g, '∂')
+      .replace(/\\nabla/g, '∇')
+      .replace(/\\infty/g, '∞')
+
+      .replace(/\\left\|([^|]+)\\right\|/g, '|$1|')
+      .replace(/\\lfloor\s*(.*?)\s*\\rfloor/g, '⌊$1⌋')
+      .replace(/\\lceil\s*(.*?)\s*\\rceil/g, '⌈$1⌉')
+
+      .replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
+      .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
+      .replace(/\\left\{/g, '{').replace(/\\right\}/g, '}')
+
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
       .replace(/\\cdot/g, '*')
       .replace(/\\pm/g, '±')
-      .replace(/\\approx/g, '≈')
       .replace(/\\forall/g, 'for all')
-      .replace(/\\neq/g, '≠')
-      .replace(/\\left|\\right/g, '')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
       .replace(/\\([a-zA-Z])/g, '$1')
-      .replace(/\{/g, '')
-      .replace(/\}/g, '')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
@@ -126,10 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
-      .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
-      // convert _5(21) to log₅(21)
-      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, argument) => `log<sub>${base}</sub>(${argument})`);
+      .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9]+)/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/_([a-zA-Z0-9]+)/g, (_, sub) => toSubscript(sub))
+      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`);
 
     return cleanSolution;
   }
