@@ -155,14 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-
+      .replace(/\\([a-zA-Z])/g, '$1')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
       .trim();
-
-    // Remove stray backslashes before numbers or letters
-    cleanSolution = cleanSolution.replace(/\\([0-9a-zA-Z])/g, '$1');
 
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
