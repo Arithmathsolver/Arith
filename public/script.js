@@ -115,7 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\left|\\right/g, '')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\([a-zA-Z])/g, '$1')
+      .replace(/\\\(/g, '') // remove \(
+      .replace(/\\\)/g, '') // remove \)
+      .replace(/\[a-zA-Z])/g, '$1')
       .replace(/\{/g, '')
       .replace(/\}/g, '')
       .replace(/\*/g, '×')
@@ -127,9 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
-      // convert _5(21) to log₅(21)
-      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, argument) => `log<sub>${base}</sub>(${argument})`);
+      .replace(/([a-zA-Z0-9])\^([^)]+)/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/_([0-9]+)([^)]+)/g, (_, base, argument) => `log<sub>${base}</sub>(${argument})`);
 
     return cleanSolution;
   }
