@@ -1,41 +1,10 @@
-
-// Dynamically load MathJax script
+// MathJax is disabled to avoid LaTeX rendering
 (function () {
-  // Check if MathJax is already loaded
-  if (window.MathJax) return;
-
-  // Set up MathJax configuration before loading it
-  window.MathJax = {
-    tex: {
-      inlineMath: [['\\(', '\\)']],
-      displayMath: [['\\[', '\\]']],
-      processEscapes: true,
-      packages: { '[+]': ['base', 'ams', 'mhchem'] },
-      macros: {
-        '\\times': '\\text{×}',
-        '\\div': '\\text{÷}',
-        '\\plus': '+',
-        '\\minus': '-'
-      }
-    },
-    loader: { load: ['[tex]/ams', '[tex]/mhchem'] },
-    options: {
-      renderActions: {
-        addMenu: []
-      }
-    }
-  };
-
-  // Create and insert the MathJax script tag
-  const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-  script.async = true;
-  document.head.appendChild(script);
+  // Intentionally not loading MathJax to prevent LaTeX formatting
+  console.log('MathJax rendering is disabled to ensure plain text output.');
 })();
 
-// Optional helper function to rerender math after dynamic content loads
+// Optional stub function to maintain compatibility if renderMath() is called
 function renderMath() {
-  if (window.MathJax && window.MathJax.typeset) {
-    MathJax.typeset();
-  }
+  // No operation since MathJax is not loaded
 }
