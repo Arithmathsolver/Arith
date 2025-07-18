@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const solveBtn = document.getElementById('solveBtn');
   const solutionOutput = document.getElementById('solutionOutput');
   const loader = document.getElementById('loader');
-  const imagePreview = document.getElementById('imagePreview'); // Add this element in your HTML
+  const imagePreview = document.getElementById('imagePreview');
 
   solveBtn.addEventListener('click', solveProblem);
   imageUpload.addEventListener('change', handleImageUpload);
@@ -36,10 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       displaySolution(data);
-      
-      // Clear inputs after successful solution
       clearInputs();
-      
+
     } catch (error) {
       console.error('Error:', error);
       solutionOutput.innerHTML = `<div class="error">Error: ${error.message}</div>`;
@@ -50,15 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleImageUpload() {
     if (imageUpload.files[0]) {
-      // Display image preview
       const reader = new FileReader();
       reader.onload = function(e) {
         imagePreview.innerHTML = `<img src="${e.target.result}" class="uploaded-image">`;
         imagePreview.style.display = 'block';
       };
       reader.readAsDataURL(imageUpload.files[0]);
-      
-      // Clear problem input if image is uploaded
       problemInput.value = '';
     }
     solveBtn.click();
@@ -73,11 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="solution">${formatSolution(data.solution)}</div>
     `;
     solutionOutput.innerHTML = solutionHTML;
-
     if (window.MathJax) {
       MathJax.typesetPromise();
     }
-
     solutionOutput.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -104,42 +97,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cleanSolution = solution
+      .replace(/\$\$/g, '') // Remove $$ block math
+      .replace(/\$(.*?)\$/g, '$1') // Remove inline $...$
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
+      .replace(/\bboxed\{([^}]*)\}/g, '$1')
+      .replace(/boxed|oxed/gi, '')
       .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1 / $2)')
       .replace(/\\sqrt\{([^}]*)\}/g, 'sqrt($1)')
-      .replace(/\\slash/g, '/')
+      .replace(/\\pi/g, 'π')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      .replace(/\\pi/g, 'π')
-      .replace(/\\pm/g, '±')
       .replace(/\\cdot/g, '*')
+      .replace(/\\pm/g, '±')
       .replace(/\\approx/g, '≈')
       .replace(/\\forall/g, 'for all')
       .replace(/\\neq/g, '≠')
       .replace(/\\left|\\right/g, '')
-      .replace(/\\begin\{[^}]+\}/g, '')
-      .replace(/\\end\{[^}]+\}/g, '')
-      .replace(/\\,/g, ' ')
-      .replace(/\\_/g, '_')
-      .replace(/\$\$/g, '')
-      .replace(/\\\[/g, '')
-      .replace(/\\\]/g, '')
+      .replace(/\\slash/g, '/')
+      .replace(/\\[a-zA-Z]+/g, '') // Remove remaining \commands
       .replace(/\{/g, '')
       .replace(/\}/g, '')
-      .replace(/\\\(/g, '(')
-      .replace(/\\\)/g, ')')
-      .replace(/\\[a-zA-Z]+/g, '') // Remove any other \commands
-      .replace(/ +/g, ' ')
+      .replace(/\*/g, '×')
+      .replace(/\n/g, '<br>')
+      .replace(/ +/g, ' ') // remove extra spaces
       .trim();
 
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/_{-/g, '_{')
-      .replace(/\*/g, '×')
-      .replace(/\n/g, '<br>');
+      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp));
 
     return cleanSolution;
   }
