@@ -1,7 +1,7 @@
 {
   "name": "math-solver-backend",
-  "version": "1.0.0",
-  "description": "Backend server for solving math problems using OCR and Together AI",
+  "version": "1.1.0",
+  "description": "Backend server for solving math problems using OCR, AI text refinement, and Together AI models.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,7 +14,10 @@
     "OCR",
     "TogetherAI",
     "Tesseract",
-    "Flask",
+    "Math Problem Solver",
+    "GPT",
+    "Math OCR",
+    "LaTeX",
     "Express"
   ],
   "author": "Your Name",
