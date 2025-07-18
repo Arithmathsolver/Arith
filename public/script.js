@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       displaySolution(data);
+      
       clearInputs();
       
     } catch (error) {
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsDataURL(imageUpload.files[0]);
       problemInput.value = '';
     }
+    solveBtn.click();
   }
 
   function displaySolution(data) {
@@ -83,135 +85,78 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatSolution(solution) {
-    // Convert to plain English first
-    let cleanText = solution
-      .replace(/\\boxed\{([^}]*)\}/g, '$1')
-      .replace(/\\begin\{[^}]*\}/g, '')
-      .replace(/\\end\{[^}]*\}/g, '')
-      .replace(/\\text\{([^}]*)\}/g, '$1')
-      .replace(/\\mathrm\{([^}]*)\}/g, '$1')
-      .replace(/\\mathbf\{([^}]*)\}/g, '<strong>$1</strong>')
-      .replace(/\\mathit\{([^}]*)\}/g, '<em>$1</em>')
-      .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1 divided by $2')
-      .replace(/\\sqrt\{([^}]*)\}/g, 'square root of $1')
-      .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, 'sum from $1 to $2')
-      .replace(/\\int_\{([^}]*)\}\^\{([^}]*)\}/g, 'integral from $1 to $2')
-      .replace(/\\lim_\{([^}]*)\}/g, 'limit as $1')
-      .replace(/\\to/g, '→')
-      .replace(/\\infty/g, '∞')
+    // helper to convert digits and symbols to superscript
+    function toSuperscript(text) {
+      const superscriptMap = {
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ',
+        'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ᶦ', 'j': 'ʲ',
+        'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ',
+        'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ',
+        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ',
+        '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾'
+      };
+      return text.split('').map(c => superscriptMap[c] || c).join('');
+    }
+
+    // Comprehensive LaTeX cleaning
+    let cleanSolution = solution
+      // Remove all LaTeX commands and environments
+      .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, '$1')
+      .replace(/\\begin\{[^}]*\}([\s\S]*?)\\end\{[^}]*\}/g, '$1')
+      // Remove special LaTeX characters
+      .replace(/\\[_^&%$#{}~]/g, '')
+      .replace(/\\ /g, ' ')
+      .replace(/\\,/g, ' ')
+      .replace(/\\:/g, ' ')
+      .replace(/\\;/g, ' ')
+      // Convert LaTeX symbols to plain text
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      .replace(/\\pm/g, '±')
       .replace(/\\approx/g, '≈')
       .replace(/\\neq/g, '≠')
       .replace(/\\leq/g, '≤')
       .replace(/\\geq/g, '≥')
-      .replace(/\\cdot/g, '·')
-      .replace(/\\ldots/g, '...')
-      .replace(/\\cdots/g, '⋯')
-      .replace(/\\vdots/g, '⋮')
-      .replace(/\\ddots/g, '⋱')
-      .replace(/\\left\(/g, '(')
-      .replace(/\\right\)/g, ')')
-      .replace(/\\left\[/g, '[')
-      .replace(/\\right\]/g, ']')
-      .replace(/\\left\\{/g, '{')
-      .replace(/\\right\\}/g, '}')
-      .replace(/\\left\|/g, '|')
-      .replace(/\\right\|/g, '|')
-      .replace(/\\,/g, ' ')
-      .replace(/\\:/g, ' ')
-      .replace(/\\;/g, ' ')
-      .replace(/\\!/g, '')
-      .replace(/\\ /g, ' ')
-      .replace(/\\quad/g, '    ')
-      .replace(/\\qquad/g, '        ')
-      .replace(/\\hspace\{[^}]*\}/g, ' ')
-      .replace(/\\vspace\{[^}]*\}/g, ' ')
-      .replace(/\\smallskip/g, '\n\n')
-      .replace(/\\medskip/g, '\n\n\n')
-      .replace(/\\bigskip/g, '\n\n\n\n')
-      .replace(/\\newline/g, '\n')
-      .replace(/\\linebreak/g, '\n')
-      .replace(/\\par/g, '\n\n')
-      .replace(/\\noindent/g, '')
-      .replace(/\\centering/g, '')
-      .replace(/\\raggedright/g, '')
-      .replace(/\\raggedleft/g, '')
-      .replace(/\\label\{[^}]*\}/g, '')
-      .replace(/\\ref\{[^}]*\}/g, '')
-      .replace(/\\cite\{[^}]*\}/g, '')
-      .replace(/\\footnote\{[^}]*\}/g, '')
-      .replace(/\\caption\{[^}]*\}/g, '')
-      .replace(/\\title\{[^}]*\}/g, '')
-      .replace(/\\author\{[^}]*\}/g, '')
-      .replace(/\\date\{[^}]*\}/g, '')
-      .replace(/\\maketitle/g, '')
-      .replace(/\\tableofcontents/g, '')
-      .replace(/\\listoffigures/g, '')
-      .replace(/\\listoftables/g, '')
-      .replace(/\\bibliography\{[^}]*\}/g, '')
-      .replace(/\\bibliographystyle\{[^}]*\}/g, '')
-      .replace(/\\index\{[^}]*\}/g, '')
-      .replace(/\\glossary\{[^}]*\}/g, '')
-      .replace(/\\include\{[^}]*\}/g, '')
-      .replace(/\\input\{[^}]*\}/g, '')
-      .replace(/\\usepackage\{[^}]*\}/g, '')
-      .replace(/\\documentclass\{[^}]*\}/g, '')
-      .replace(/\\begin\{document\}/g, '')
-      .replace(/\\end\{document\}/g, '')
-      .replace(/\\[a-zA-Z]+/g, '') // Catch-all for remaining commands
-      .replace(/\$\$([^$]+)\$\$/g, '$1') // Display math
-      .replace(/\$([^$]+)\$/g, '$1') // Inline math
-      .replace(/\\\[/g, '')
-      .replace(/\\\]/g, '')
-      .replace(/\\\(/g, '')
-      .replace(/\\\)/g, '')
-      .replace(/\{/g, '')
-      .replace(/\}/g, '')
-      .replace(/\\_/g, '_')
-      .replace(/\\\^/g, '^')
-      .replace(/\\~/g, '~')
-      .replace(/\\&/g, '&')
-      .replace(/\\%/g, '%')
-      .replace(/\\#/g, '#')
-      .replace(/\\\$/g, '$')
-      .replace(/\\\{/g, '{')
-      .replace(/\\\}/g, '}')
-      .replace(/\\\|/g, '|')
-      .replace(/\\</g, '<')
-      .replace(/\\>/g, '>')
-      .replace(/\\\[/g, '[')
-      .replace(/\\\]/g, ']')
-      .replace(/\\\(/g, '(')
-      .replace(/\\\)/g, ')');
-
-    // Format logarithms properly
-    cleanText = cleanText.replace(/\\log_([a-z0-9]+)\(([^)]+)\)/g, 
-      '<span class="log-format"><span class="log-body">log</span><span class="log-base">$1</span>($2)</span>');
-
-    // Format fractions visually
-    cleanText = cleanText.replace(/([0-9.]+)\/([0-9.]+)/g, 
-      '<span class="frac"><span class="numerator">$1</span><span class="denominator">$2</span></span>');
-
-    // Format exponents
-    cleanText = cleanText.replace(/([a-zA-Z0-9]+)\^([a-zA-Z0-9]+)/g, 
-      '$1<sup>$2</sup>');
-
-    // Clean up multiple spaces and newlines
-    cleanText = cleanText
+      .replace(/\\pm/g, '±')
+      .replace(/\\to/g, '→')
+      .replace(/\\infty/g, '∞')
+      // Remove math mode delimiters
+      .replace(/\$\$?([^$]*)\$\$?/g, '$1')
+      .replace(/\\[()[\]]/g, '')
+      // Remove remaining LaTeX artifacts
+      .replace(/\\[a-zA-Z]+/g, '')
+      .replace(/[\{\}]/g, '')
+      // Clean up whitespace
       .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n/g, '\n\n')
       .trim();
 
-    return cleanText;
+    // Enhanced logarithm formatting (preserved from original)
+    cleanSolution = cleanSolution
+      .replace(/log_(\d+|\\?[a-z])\(([^)]+)\)/g, 
+        '<span class="log-format"><span class="log-body">log</span><span class="log-base">$1</span>($2)</span>')
+      .replace(/log\(([^)]+)\)/g, 'log($1)');
+
+    // Enhanced fraction formatting (preserved from original)
+    cleanSolution = cleanSolution
+      .replace(/([0-9.]+)\/([0-9.]+)/g, 
+        '<span class="frac"><span class="numerator">$1</span><span class="denominator">$2</span></span>');
+
+    // Preserved superscript formatting from original
+    cleanSolution = cleanSolution
+      .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
+      .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
+      .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/_{-/g, '_{')
+      .replace(/\*/g, '×')
+      .replace(/\n/g, '<br>');
+
+    return cleanSolution;
   }
 
   function showLoading(show) {
     loader.style.display = show ? 'block' : 'none';
-    solveBtn.disabled = show;
-  }
-});lock' : 'none';
     solveBtn.disabled = show;
   }
 });
