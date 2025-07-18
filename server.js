@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
@@ -53,7 +52,7 @@ Rules:
 1. Provide step-by-step solutions.
 2. Use LaTeX for math expressions.
 3. Highlight key concepts.
-4. Box final answers: \boxed{answer}
+4. Box final answers: \\boxed{answer}
 5. Support: Arithmetic, Algebra, Calculus, Geometry, Statistics.
 `;
 
@@ -98,18 +97,41 @@ async function solveMathProblem(problem) {
   });
 }
 
-// OCR Processing
+// OCR Processing with Mathpix + fallback to Tesseract
 async function extractTextFromImage(imageBuffer) {
+  // Try Mathpix OCR first
+  try {
+    const mathpixResponse = await axios.post('https://api.mathpix.com/v3/text', {
+      src: `data:image/png;base64,${imageBuffer.toString('base64')}`,
+      formats: ['text']
+    }, {
+      headers: {
+        'app_id': process.env.MATHPIX_APP_ID,
+        'app_key': process.env.MATHPIX_APP_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (mathpixResponse.data.text) {
+      logger.info('✅ Mathpix OCR succeeded');
+      return mathpixResponse.data.text.trim();
+    }
+  } catch (error) {
+    logger.warn(`⚠️ Mathpix OCR failed: ${error.message}`);
+  }
+
+  // Fallback to Tesseract if Mathpix fails
   try {
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
     const { data: { text } } = await worker.recognize(imageBuffer);
     await worker.terminate();
+    logger.info('✅ Fallback Tesseract OCR succeeded');
     return text.trim();
   } catch (error) {
-    logger.error(`❌ OCR Error: ${error.message}`);
-    throw new Error('Failed to process image');
+    logger.error(`❌ Tesseract OCR Error: ${error.message}`);
+    throw new Error('Failed to process image via OCR');
   }
 }
 
@@ -142,9 +164,8 @@ app.post('/api/solve', async (req, res) => {
 
     let solution = await solveMathProblem(problem);
 
-    // Wrap LaTeX solution with MathJax delimiters if not already wrapped
-    if (!solution.includes('\(') && !solution.includes('\[')) {
-      solution = `\(${solution}\)`;
+    if (!solution.includes('\\(') && !solution.includes('\\[')) {
+      solution = `\\(${solution}\\)`;
     }
 
     res.json({ problem, solution });
