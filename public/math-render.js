@@ -1,3 +1,20 @@
+// Optional helper function to rerender math after dynamic content loads
+function renderMath() {
+  if (window.MathJax && window.MathJax.typeset) {
+    MathJax.typeset();
+  }
+}
+
+// Function to clean up LaTeX artifacts if needed globally
+function cleanLatexArtifacts(content) {
+  return content
+    .replace(/\\\(/g, '') // remove \( 
+    .replace(/\\\)/g, '') // remove \)
+    .replace(/\$\$/g, '')
+    .replace(/\$(.*?)\$/g, '$1')
+    .trim();
+}
+
 // Dynamically load MathJax script
 (function () {
   if (window.MathJax) return;
@@ -28,26 +45,3 @@
   script.async = true;
   document.head.appendChild(script);
 })();
-
-// Optional helper function to rerender math after dynamic content loads
-function renderMath() {
-  if (window.MathJax && window.MathJax.typeset) {
-    MathJax.typeset();
-  }
-}
-
-// Optional: Clean solution if needed before rendering with MathJax
-function cleanSolutionForRender(solution) {
-  return solution
-    .replace(/\\slash/g, '/')       // Replaces \slash with /
-    .replace(/\\times/g, '×')       // Replaces \times with ×
-    .replace(/\\div/g, '÷')         // Replaces \div with ÷
-    .replace(/\\cdot/g, '*')        // Replaces \cdot with *
-    .replace(/\\pi/g, 'π')          // Replaces \pi with π
-    .replace(/\\pm/g, '±')          // Replaces \pm with ±
-    .replace(/\\approx/g, '≈')      // Replaces \approx with ≈
-    .replace(/\\forall/g, 'for all')
-    .replace(/\\neq/g, '≠')
-    .replace(/\\left|\\right/g, '')
-    .replace(/\\_/g, '_');
-}
