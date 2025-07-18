@@ -99,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let cleanSolution = solution
       .replace(/\$\$/g, '') 
       .replace(/\$(.*?)\$/g, '$1')
+      .replace(/\\\(/g, '') // remove \( 
+      .replace(/\\\)/g, '') // remove \)
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
       .replace(/boxed|oxed/gi, '')
@@ -115,8 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\left|\\right/g, '')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\\(/g, '') // remove \(
-      .replace(/\\\)/g, '') // remove \)
       .replace(/\[a-zA-Z])/g, '$1')
       .replace(/\{/g, '')
       .replace(/\}/g, '')
