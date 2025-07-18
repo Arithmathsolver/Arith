@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cleanSolution = solution
-      .replace(/\$\$/g, '') // Remove $$ block math
-      .replace(/\$(.*?)\$/g, '$1') // Remove inline $...$
+      .replace(/\$\$/g, '') 
+      .replace(/\$(.*?)\$/g, '$1')
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
       .replace(/boxed|oxed/gi, '')
@@ -114,19 +114,22 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\neq/g, '≠')
       .replace(/\\left|\\right/g, '')
       .replace(/\\slash/g, '/')
-      .replace(/\\[a-zA-Z]+/g, '') // Remove remaining \commands
+      .replace(/\\_/g, '_')
+      .replace(/\\([a-zA-Z])/g, '$1')
       .replace(/\{/g, '')
       .replace(/\}/g, '')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
-      .replace(/ +/g, ' ') // remove extra spaces
+      .replace(/ +/g, ' ')
       .trim();
 
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp));
+      .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
+      // convert _5(21) to log₅(21)
+      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, argument) => `log<sub>${base}</sub>(${argument})`);
 
     return cleanSolution;
   }
