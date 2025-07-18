@@ -82,17 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearInputs() {
-    // Clear text input
     problemInput.value = '';
-    
-    // Clear file input and preview
     imageUpload.value = '';
     imagePreview.innerHTML = '';
     imagePreview.style.display = 'none';
   }
 
   function formatSolution(solution) {
-    // helper to convert digits and symbols to superscript
     function toSuperscript(text) {
       const superscriptMap = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -107,19 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return text.split('').map(c => superscriptMap[c] || c).join('');
     }
 
-    // First pass: Clean LaTeX artifacts
     let cleanSolution = solution
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
-      .replace(/\\begin\{[^}]+\}/g, '')
-      .replace(/\\end\{[^}]+\}/g, '')
-      .replace(/\\align/g, '')
-      .replace(/\\,/g, ' ')
+      .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1 / $2)')
+      .replace(/\\sqrt\{([^}]*)\}/g, 'sqrt($1)')
+      .replace(/\\slash/g, '/')
+      .replace(/\\times/g, '×')
+      .replace(/\\div/g, '÷')
+      .replace(/\\pi/g, 'π')
+      .replace(/\\pm/g, '±')
+      .replace(/\\cdot/g, '*')
       .replace(/\\approx/g, '≈')
       .replace(/\\forall/g, 'for all')
       .replace(/\\neq/g, '≠')
-      .replace(/\\left/g, '')
-      .replace(/\\right/g, '')
-      .replace(/\\([^_])/g, '$1')
+      .replace(/\\left|\\right/g, '')
+      .replace(/\\begin\{[^}]+\}/g, '')
+      .replace(/\\end\{[^}]+\}/g, '')
+      .replace(/\\,/g, ' ')
       .replace(/\\_/g, '_')
       .replace(/\$\$/g, '')
       .replace(/\\\[/g, '')
@@ -127,30 +127,21 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\{/g, '')
       .replace(/\}/g, '')
       .replace(/\\\(/g, '(')
-      .replace(/\\\)/g, ')');
+      .replace(/\\\)/g, ')')
+      .replace(/\\[a-zA-Z]+/g, '') // Remove any other \commands
+      .replace(/ +/g, ' ')
+      .trim();
 
-    // Enhanced logarithm formatting
     cleanSolution = cleanSolution
-      .replace(/\\log_(\d+|\\?[a-z])\(([^)]+)\)/g, 
-        '<span class="log-format"><span class="log-body">log</span><span class="log-base">$1</span>($2)</span>')
-      .replace(/\\log\(([^)]+)\)/g, 'log($1)');
-
-    // Enhanced fraction formatting
-    cleanSolution = cleanSolution
-      .replace(/([^\\])\\frac\{([^}]+)\}\{([^}]+)\}/g, 
-        '<span class="frac"><span class="numerator">$2</span><span class="denominator">$3</span></span>');
-
-    // Second pass: Apply other formatting
-    return cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z])/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/([a-zA-Z0-9])\^\(([^)]+)\)/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/_{-/g, '_{')
       .replace(/\*/g, '×')
-      .replace(/\\times/g, '×')
-      .replace(/\\div/g, '÷')
       .replace(/\n/g, '<br>');
+
+    return cleanSolution;
   }
 
   function showLoading(show) {
