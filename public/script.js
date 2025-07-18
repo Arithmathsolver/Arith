@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   imageUpload.addEventListener('change', handleImageUpload);
 
   async function solveProblem() {
-    const problem = problemInput.value.trim();
+    let problem = problemInput.value.trim();
 
     if (!problem && !imageUpload.files[0]) {
       alert('Please enter a problem or upload an image');
@@ -22,8 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
       solutionOutput.innerHTML = '';
 
       const formData = new FormData();
-      if (problem) formData.append('problem', problem);
-      if (imageUpload.files[0]) formData.append('image', imageUpload.files[0]);
+
+      if (problem) {
+        const cleanedProblem = formatSolution(problem);
+        formData.append('problem', cleanedProblem);
+      }
+
+      if (imageUpload.files[0]) {
+        formData.append('image', imageUpload.files[0]);
+      }
 
       const response = await fetch('/api/solve', {
         method: 'POST',
@@ -108,7 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cleanSolution = solution
-      .replace(/\$\$/g, '') 
+      .replace(/\\begin\{.*?\}/g, '')
+      .replace(/\\end\{.*?\}/g, '')
+      .replace(/\\\\/g, ' ')
+      .replace(/\\,/g, ' ')
+      .replace(/\\!/g, '')
+      .replace(/\\;/g, ' ')
+      .replace(/\\:/g, ' ')
+      .replace(/\\quad/g, ' ')
+      .replace(/\\qquad/g, ' ')
+      .replace(/\\ /g, ' ')
+      .replace(/\$\$/g, '')
       .replace(/\$(.*?)\$/g, '$1')
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
@@ -118,12 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
 
+      .replace(/\\pi/g, 'π')
+      .replace(/\\theta/g, 'θ')
       .replace(/\\alpha/g, 'α')
       .replace(/\\beta/g, 'β')
       .replace(/\\gamma/g, 'γ')
       .replace(/\\delta/g, 'δ')
-      .replace(/\\theta/g, 'θ')
-      .replace(/\\pi/g, 'π')
       .replace(/\\sigma/g, 'σ')
       .replace(/\\omega/g, 'ω')
       .replace(/\\Delta/g, 'Δ')
@@ -155,7 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\([a-zA-Z])/g, '$1')
+
+      .replace(/\\([0-9a-zA-Z])/g, '$1')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
