@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   imageUpload.addEventListener('change', handleImageUpload);
 
   async function solveProblem() {
-    const problem = problemInput.value.trim();
+    let problem = problemInput.value.trim();
 
     if (!problem && !imageUpload.files[0]) {
       alert('Please enter a problem or upload an image');
@@ -22,8 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
       solutionOutput.innerHTML = '';
 
       const formData = new FormData();
-      if (problem) formData.append('problem', problem);
-      if (imageUpload.files[0]) formData.append('image', imageUpload.files[0]);
+
+      if (problem) {
+        const cleanedProblem = formatSolution(problem);
+        formData.append('problem', cleanedProblem);
+      }
+
+      if (imageUpload.files[0]) {
+        formData.append('image', imageUpload.files[0]);
+      }
 
       const response = await fetch('/api/solve', {
         method: 'POST',
@@ -155,11 +162,13 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\([a-zA-Z])/g, '$1')
+
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
       .trim();
+
+    cleanSolution = cleanSolution.replace(/\\([0-9a-zA-Z])/g, '$1');
 
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
