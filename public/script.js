@@ -132,8 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/boxed|oxed/gi, '')
 
       .replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
+      .replace(/\bfrac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
       .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
+      .replace(/\bsqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
+
+      .replace(/\\log\s*{([^}]+)}/g, 'log($1)')
+      .replace(/\blog\s*{([^}]+)}/g, 'log($1)')
 
       .replace(/\\pi/g, 'π')
       .replace(/\\theta/g, 'θ')
@@ -177,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
-      .replace(/\\+/g, '') // <<=== removes ALL remaining slashes
+      .replace(/\\+/g, '') // removes remaining slashes
       .trim();
 
     cleanSolution = cleanSolution
