@@ -115,13 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\left|\\right/g, '')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\([a-zA-Z])/g, '$1') // remove \ before letters
+      .replace(/\\([a-zA-Z])/g, '$1')
       .replace(/\{/g, '')
       .replace(/\}/g, '')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
-      .replace(/\\/g, '') // ✅ Remove remaining slashes
       .trim();
 
     cleanSolution = cleanSolution
