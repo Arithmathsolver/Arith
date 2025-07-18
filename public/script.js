@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
+      .replace(/\\+/g, '') // <<=== removes ALL remaining slashes
       .trim();
 
     cleanSolution = cleanSolution
