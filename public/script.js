@@ -76,8 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      // Populate the input with OCR result and trigger solve
-      problemInput.value = data.corrected || '';
+      let corrected = data.corrected || '';
+      corrected = corrected.replace(/^Here is the corrected text:\s*/i, '');
+      problemInput.value = corrected.trim();
       solveBtn.click();
 
     } catch (err) {
