@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       showLoading(true);
-      solutionOutput.innerHTML = '';
+      solutionOutput.innerHTML = 'Solving, please wait...';
 
       const formData = new FormData();
 
