@@ -1,4 +1,3 @@
-```javascript
 document.addEventListener('DOMContentLoaded', () => { 
   const problemInput = document.getElementById('problemInput');
   const imageUpload = document.getElementById('imageUpload');
@@ -212,4 +211,3 @@ document.addEventListener('DOMContentLoaded', () => {
     solveBtn.disabled = show;
   }
 });
-```
