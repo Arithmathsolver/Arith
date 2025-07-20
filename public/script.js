@@ -62,9 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       reader.readAsDataURL(imageUpload.files[0]);
       previewOCR(imageUpload.files[0]);
-      problemInput.value = '';
     }
-    solveBtn.click();
   }
 
   async function previewOCR(imageFile) {
@@ -83,12 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      solutionOutput.innerHTML = `${data.corrected}<hr>`;
+      problemInput.value = data.corrected;
+      solveBtn.click();
 
       if (window.MathJax) {
         MathJax.typesetPromise();
       }
-      solutionOutput.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
       console.error('OCR Preview Error:', err);
     }
