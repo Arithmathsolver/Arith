@@ -55,12 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleImageUpload() {
     if (imageUpload.files[0]) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        imagePreview.innerHTML = `<img src="${e.target.result}" class="uploaded-image">`;
-        imagePreview.style.display = 'block';
-      };
-      reader.readAsDataURL(imageUpload.files[0]);
       previewOCR(imageUpload.files[0]);
       problemInput.value = '';
     }
@@ -82,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      // Instead of showing the OCR result, populate the input then auto solve
+      // Populate the input with OCR result and trigger solve
       problemInput.value = data.corrected || '';
       solveBtn.click();
 
