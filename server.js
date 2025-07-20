@@ -113,12 +113,20 @@ function postProcessMathText(text) {
 
 async function refineMathTextWithAI(rawText) {
   const prompt = `
-You are an OCR correction AI. The following text is OCR'd from a math image, but some symbols may be wrong. Fix common math OCR errors like replacing V with √, n with π, O with 0, l with 1.
+You are an expert OCR correction AI. The following text was extracted from an image and contains math symbols mixed with text. Some symbols and words may be wrong due to OCR errors.
 
-Original OCR text:
+Your tasks:
+1. Correct math symbols: replace V with √, pi or n with π when appropriate, O with 0, l with 1, etc.
+2. Correct common English words that might be misspelled due to OCR.
+3. Preserve mathematical expressions, symbols, and their placement.
+4. Format the corrected output clearly and coherently without changing the meaning.
+
+Here is the raw OCR text:
+""" 
 ${rawText}
+"""
 
-Return the cleaned and corrected math expression only, no explanations.
+Return only the fully corrected text, no extra commentary or explanation.
 `;
 
   const response = await axios.post(
@@ -129,7 +137,7 @@ Return the cleaned and corrected math expression only, no explanations.
         { role: "system", content: prompt }
       ],
       temperature: 0,
-      max_tokens: 300
+      max_tokens: 600
     },
     {
       headers: {
@@ -148,14 +156,14 @@ async function extractTextFromImage(imageBuffer) {
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
-    const { data: { text } } = await worker.recognize(imageBuffer);
+    const { data: { text: rawText } } = await worker.recognize(imageBuffer);
     await worker.terminate();
 
-    const postProcessed = postProcessMathText(text);
+    const postProcessed = postProcessMathText(rawText);
     const refined = await refineMathTextWithAI(postProcessed);
 
-    logger.info(`🖼️ OCR Raw: ${text}`);
-    logger.info(`🔍 Post-Processed: ${postProcessed}`);
+    logger.info(`🖼️ OCR Raw: ${rawText}`);
+    logger.info(`🧹 Post-Processed: ${postProcessed}`);
     logger.info(`🤖 AI Refined: ${refined}`);
 
     return refined;
@@ -176,7 +184,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// API Routes
+// --- API Routes ---
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
@@ -199,6 +207,37 @@ app.post('/api/solve', async (req, res) => {
     res.json({ problem, solution });
   } catch (error) {
     logger.error(`❌ API Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/ocr-preview', async (req, res) => {
+  try {
+    if (!req.files?.image) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const worker = await createWorker();
+    await worker.loadLanguage('eng');
+    await worker.initialize('eng');
+
+    const { data: { text: rawText } } = await worker.recognize(req.files.image.data);
+    await worker.terminate();
+
+    const postProcessed = postProcessMathText(rawText);
+    const refined = await refineMathTextWithAI(postProcessed);
+
+    logger.info(`🖼️ Preview OCR Raw: ${rawText}`);
+    logger.info(`🧼 Preview Post-Processed: ${postProcessed}`);
+    logger.info(`✅ Preview AI Refined: ${refined}`);
+
+    res.json({
+      raw: rawText.trim(),
+      cleaned: postProcessed,
+      corrected: refined
+    });
+  } catch (error) {
+    logger.error(`❌ OCR Preview Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });
