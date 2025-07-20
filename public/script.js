@@ -1,3 +1,4 @@
+```javascript
 document.addEventListener('DOMContentLoaded', () => { 
   const problemInput = document.getElementById('problemInput');
   const imageUpload = document.getElementById('imageUpload');
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       showLoading(true);
-      solutionOutput.innerHTML = 'Solving, please wait...';  // Added line
+      solutionOutput.innerHTML = '';
 
       const formData = new FormData();
 
@@ -211,3 +212,4 @@ document.addEventListener('DOMContentLoaded', () => {
     solveBtn.disabled = show;
   }
 });
+```
