@@ -83,10 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      solutionOutput.innerHTML = `
-        <div><strong>Corrected OCR:</strong> ${data.corrected}</div>
-        <hr>
-      `;
+      solutionOutput.innerHTML = `${data.corrected}<hr>`;
 
       if (window.MathJax) {
         MathJax.typesetPromise();
