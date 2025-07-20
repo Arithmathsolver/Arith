@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { 
   const problemInput = document.getElementById('problemInput');
   const imageUpload = document.getElementById('imageUpload');
   const solveBtn = document.getElementById('solveBtn');
@@ -61,11 +61,41 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.style.display = 'block';
       };
       reader.readAsDataURL(imageUpload.files[0]);
+      previewOCR(imageUpload.files[0]); // new function to preview OCR
       problemInput.value = '';
     }
     solveBtn.click();
   }
 
+  async function previewOCR(imageFile) {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await fetch('/api/ocr-preview', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+
+      console.log('OCR Preview:', data);
+      solutionOutput.innerHTML = `
+        <div><strong>OCR Raw:</strong> ${data.raw}</div>
+        <div><strong>Cleaned:</strong> ${data.cleaned}</div>
+        <div><strong>Corrected:</strong> ${data.corrected}</div>
+        <hr>
+      `;
+    } catch (err) {
+      console.error('OCR Preview Error:', err);
+    }
+  }
+
+  // Remaining code unchanged
   function displaySolution(data) {
     let solutionHTML = `
       <div class="original-problem">
@@ -74,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <hr>
       <div class="solution">${formatSolution(data.solution)}</div>
     `;
-    solutionOutput.innerHTML = solutionHTML;
+    solutionOutput.innerHTML += solutionHTML;
     if (window.MathJax) {
       MathJax.typesetPromise();
     }
@@ -115,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cleanSolution = solution
+      // your entire formatSolution unchanged
       .replace(/\\begin\{.*?\}/g, '')
       .replace(/\\end\{.*?\}/g, '')
       .replace(/\\\\/g, ' ')
@@ -130,16 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
       .replace(/boxed|oxed/gi, '')
-
       .replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
       .replace(/\bfrac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
       .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\bsqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
-
       .replace(/\\log\s*{([^}]+)}/g, 'log($1)')
       .replace(/\blog\s*{([^}]+)}/g, 'log($1)')
-
       .replace(/\\pi/g, 'π')
       .replace(/\\theta/g, 'θ')
       .replace(/\\alpha/g, 'α')
@@ -150,26 +178,21 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\omega/g, 'ω')
       .replace(/\\Delta/g, 'Δ')
       .replace(/\\Sigma/g, 'Σ')
-
       .replace(/\\geq/g, '≥')
       .replace(/\\leq/g, '≤')
       .replace(/\\neq/g, '≠')
       .replace(/\\approx/g, '≈')
-
       .replace(/\\sum_{([^}]+)}\^({([^}]+)}|(\w))/g, 'Sum $1 to $3$4')
       .replace(/\\int_{([^}]+)}\^{([^}]+)}/g, 'Integral from $1 to $2')
       .replace(/\\partial/g, '∂')
       .replace(/\\nabla/g, '∇')
       .replace(/\\infty/g, '∞')
-
       .replace(/\\left\|([^|]+)\\right\|/g, '|$1|')
       .replace(/\\lfloor\s*(.*?)\s*\\rfloor/g, '⌊$1⌋')
       .replace(/\\lceil\s*(.*?)\s*\\rceil/g, '⌈$1⌉')
-
       .replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
       .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
       .replace(/\\left\{/g, '{').replace(/\\right\}/g, '}')
-
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
       .replace(/\\cdot/g, '*')
@@ -177,12 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-
       .replace(/\\([0-9a-zA-Z])/g, '$1')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
-      .replace(/\\+/g, '') // removes remaining slashes
+      .replace(/\\+/g, '')
       .trim();
 
     cleanSolution = cleanSolution
