@@ -113,8 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const superscriptMap = {
         '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
         '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
-        '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
-        'n': 'ⁿ', 'i': 'ⁱ'
+        'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ',
+        'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ⁱ', 'j': 'ʲ',
+        'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ',
+        'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ',
+        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ'
       };
       return text.split('').map(c => superscriptMap[c] || c).join('');
     }
@@ -123,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const subscriptMap = {
         '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
         '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
-        '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
         'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ', 'i': 'ᵢ', 'j': 'ⱼ',
         'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ', 'o': 'ₒ',
         'p': 'ₚ', 'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ',
@@ -132,38 +134,29 @@ document.addEventListener('DOMContentLoaded', () => {
       return text.split('').map(c => subscriptMap[c] || c).join('');
     }
 
-    function recursiveFrac(text) {
-      return text.replace(/\\frac\s*{([^{}]+)}{([^{}]+)}/g, (_, num, den) => {
-        return `(${recursiveFrac(num)} / ${recursiveFrac(den)})`;
-      });
-    }
-
-    let clean = solution
-      .replace(/\\begin\{cases\}(.+?)\\end\{cases\}/gs, (_, block) =>
-        block.replace(/\\\\/g, '<br>').replace(/&/g, ' : ')
-      )
-      .replace(/\\text\s*{([^}]+)}/g, '$1')
+    let cleanSolution = solution
       .replace(/\\begin\{.*?\}/g, '')
       .replace(/\\end\{.*?\}/g, '')
-      .replace(/\\\\/g, '<br>')
+      .replace(/\\\\/g, ' ')
+      .replace(/\\,/g, ' ')
+      .replace(/\\!/g, '')
+      .replace(/\\;/g, ' ')
+      .replace(/\\:/g, ' ')
+      .replace(/\\quad/g, ' ')
+      .replace(/\\qquad/g, ' ')
+      .replace(/\\ /g, ' ')
       .replace(/\$\$/g, '')
       .replace(/\$(.*?)\$/g, '$1')
-      .replace(/\\hat\s*{([^}]+)}/g, '$1̂')
-      .replace(/\\bar\s*{([^}]+)}/g, '$1̄')
-      .replace(/\\vec\s*{([^}]+)}/g, '→$1')
-      .replace(/\\overline\s*{([^}]+)}/g, '$1̅')
-      .replace(/\\underline\s*{([^}]+)}/g, '_$1_')
-      .replace(/\\frac\s*{([^{}]+)}{([^{}]+)}/g, (_, a, b) => `(${a} / ${b})`)
-      .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
+      .replace(/\\boxed\{([^}]*)\}/g, '$1')
+      .replace(/\bboxed\{([^}]*)\}/g, '$1')
+      .replace(/boxed|oxed/gi, '')
+      .replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
+      .replace(/\bfrac\s*{([^}]+)}{([^}]+)}/g, '($1 / $2)')
       .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
-      .replace(/\\log\s*_{([^}]+)}\s*{([^}]+)}/g, 'log_$1($2)')
+      .replace(/\bsqrt\s*{([^}]+)}/g, '√$1')
+      .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
       .replace(/\\log\s*{([^}]+)}/g, 'log($1)')
-      .replace(/\\lim_{([^}]+)}/g, 'lim ($1)')
-      .replace(/\\sum_{([^}]+)}\^({([^}]+)}|(\w))/g, 'Sum from $1 to $3$4')
-      .replace(/\\int_{([^}]+)}\^{([^}]+)}/g, 'Integral from $1 to $2')
-      .replace(/\\partial/g, '∂')
-      .replace(/\\nabla/g, '∇')
-      .replace(/\\infty/g, '∞')
+      .replace(/\blog\s*{([^}]+)}/g, 'log($1)')
       .replace(/\\pi/g, 'π')
       .replace(/\\theta/g, 'θ')
       .replace(/\\alpha/g, 'α')
@@ -178,38 +171,39 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\leq/g, '≤')
       .replace(/\\neq/g, '≠')
       .replace(/\\approx/g, '≈')
+      .replace(/\\sum_{([^}]+)}\^({([^}]+)}|(\w))/g, 'Sum $1 to $3$4')
+      .replace(/\\int_{([^}]+)}\^{([^}]+)}/g, 'Integral from $1 to $2')
+      .replace(/\\partial/g, '∂')
+      .replace(/\\nabla/g, '∇')
+      .replace(/\\infty/g, '∞')
+      .replace(/\\left\|([^|]+)\\right\|/g, '|$1|')
+      .replace(/\\lfloor\s*(.*?)\s*\\rfloor/g, '⌊$1⌋')
+      .replace(/\\lceil\s*(.*?)\s*\\rceil/g, '⌈$1⌉')
+      .replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
+      .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
+      .replace(/\\left\{/g, '{').replace(/\\right\}/g, '}')
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
-      .replace(/\\cdot/g, '·')
+      .replace(/\\cdot/g, '*')
       .replace(/\\pm/g, '±')
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      .replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
-      .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
-      .replace(/\\left\{/g, '{').replace(/\\right\}/g, '}')
-      .replace(/\\sin\s*{([^}]+)}/g, 'sin($1)')
-      .replace(/\\cos\s*{([^}]+)}/g, 'cos($1)')
-      .replace(/\\tan\s*{([^}]+)}/g, 'tan($1)')
-      .replace(/\\csc\s*{([^}]+)}/g, 'csc($1)')
-      .replace(/\\sec\s*{([^}]+)}/g, 'sec($1)')
-      .replace(/\\cot\s*{([^}]+)}/g, 'cot($1)')
-      .replace(/\\([a-zA-Z])/g, '$1')
+      .replace(/\\([0-9a-zA-Z])/g, '$1')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
       .replace(/ +/g, ' ')
       .replace(/\\+/g, '')
       .trim();
 
-    clean = recursiveFrac(clean);
+    cleanSolution = cleanSolution
+      .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
+      .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
+      .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9]+)/g, (_, base, exp) => base + toSuperscript(exp))
+      .replace(/_([a-zA-Z0-9]+)/g, (_, sub) => toSubscript(sub))
+      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`);
 
-    clean = clean
-      .replace(/(\S)\^\{([^}]+)\}/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/(\S)\^(\S)/g, (_, base, exp) => base + toSuperscript(exp))
-      .replace(/(\S)_\{([^}]+)\}/g, (_, base, sub) => base + toSubscript(sub))
-      .replace(/(\S)_(\S)/g, (_, base, sub) => base + toSubscript(sub));
-
-    return clean;
+    return cleanSolution;
   }
 
   function showLoading(show) {
