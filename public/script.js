@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.style.display = 'block';
       };
       reader.readAsDataURL(imageUpload.files[0]);
-      previewOCR(imageUpload.files[0]); // new function to preview OCR
+      previewOCR(imageUpload.files[0]);
       problemInput.value = '';
     }
     solveBtn.click();
@@ -83,19 +83,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      console.log('OCR Preview:', data);
       solutionOutput.innerHTML = `
-        <div><strong>OCR Raw:</strong> ${data.raw}</div>
-        <div><strong>Cleaned:</strong> ${data.cleaned}</div>
-        <div><strong>Corrected:</strong> ${data.corrected}</div>
+        <div><strong>Corrected OCR:</strong> ${data.corrected}</div>
         <hr>
       `;
+
+      if (window.MathJax) {
+        MathJax.typesetPromise();
+      }
+      solutionOutput.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
       console.error('OCR Preview Error:', err);
     }
   }
 
-  // Remaining code unchanged
   function displaySolution(data) {
     let solutionHTML = `
       <div class="original-problem">
@@ -145,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cleanSolution = solution
-      // your entire formatSolution unchanged
       .replace(/\\begin\{.*?\}/g, '')
       .replace(/\\end\{.*?\}/g, '')
       .replace(/\\\\/g, ' ')
