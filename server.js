@@ -103,7 +103,12 @@ async function solveMathProblem(problem) {
   return await getCachedSolution(problem, async () => {
     for (let model of models) {
       try {
-        return await tryModel(model, problem);
+        let result = await tryModel(model, problem);
+
+        // Replace ×× with bold markdown
+        result = result.replace(/××(.*?)××/g, (_, text) => `**${text.trim()}**`);
+
+        return result;
       } catch (err) {
         logger.warn(`⚠️ Model ${model} failed: ${err.response?.data?.error?.message || err.message}`);
       }
