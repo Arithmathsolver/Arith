@@ -10,10 +10,12 @@ services:
       - "3001:3001"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OCR_ENGINE=tesseract
+      - OCR_ENGINE=trocr           # Updated to use TrOCR
       - CACHE_ENABLED=true
     volumes:
       - ./backend:/app
+    depends_on:
+      - trocr-deps                 # Wait for trocr deps to be installed (optional)
     restart: unless-stopped
 
   frontend:
@@ -34,3 +36,10 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+
+  trocr-deps:
+    image: python:3.10
+    command: >
+      sh -c "pip install torch transformers Pillow && tail -f /dev/null"
+    volumes:
+      - ./backend:/app
