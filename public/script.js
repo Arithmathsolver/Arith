@@ -118,8 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ⁱ', 'j': 'ʲ',
         'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ',
         'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ',
-        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ',
-        '{': '', '}': ''
+        'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ'
       };
       return text.split('').map(c => superscriptMap[c.toLowerCase()] || c).join('');
     }
@@ -132,21 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ', 'i': 'ᵢ', 'j': 'ⱼ',
         'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ', 'o': 'ₒ',
         'p': 'ₚ', 'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ',
-        'v': 'ᵥ', 'x': 'ₓ',
-        '{': '', '}': ''
+        'v': 'ᵥ', 'x': 'ₓ'
       };
       return text.split('').map(c => subscriptMap[c.toLowerCase()] || c).join('');
     }
 
     function processLatex(latex) {
-      // Handle text macros first
-      latex = latex.replace(/\\text\s*{([^}]*)}/g, '$1');
-      
-      // Handle choose notation
-      latex = latex.replace(/(\d+)\s*\\?choose\s*(\d+)/g, '$1C$2');
-      
       // Handle exponents with parentheses
-      latex = latex.replace(/(\([^)]+\)|\w+)\^({[^}]+}|[^{])/g, (match, base, exp) => {
+      latex = latex.replace(/(\([^)]+\))\^({[^}]+}|[^{])/g, (match, base, exp) => {
         const exponent = exp.startsWith('{') ? exp.slice(1, -1) : exp;
         return base + toSuperscript(exponent);
       });
@@ -159,30 +151,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Handle multi-level fractions recursively
       latex = latex.replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, (match, num, den) => {
-        return `(${processLatex(num)}/${processLatex(den)})`;
+        return `(${processLatex(num)} / ${processLatex(den)})`;
       });
 
-      // Handle simple fractions without \frac
-      latex = latex.replace(/(\d+)\s*\/\s*(\d+)/g, '$1/$2');
+      // Handle trigonometric functions
+      latex = latex.replace(/\\(sin|cos|tan|csc|sec|cot)\s*{([^}]+)}/gi, '$1($2)');
 
-      // Handle factorials
-      latex = latex.replace(/(\d+)!/g, '$1!');
+      // Handle limits
+      latex = latex.replace(/\\lim_({[^}]+}|[^{])\s*([^\\]+)?/g, (match, sub, expr) => {
+        const limVar = sub.startsWith('{') ? sub.slice(1, -1) : sub;
+        return `lim${toSubscript(limVar)}${expr ? ' ' + expr.trim() : ''}`;
+      });
 
-      // Handle text in parentheses
-      latex = latex.replace(/\(text\{([^}]+)\}\)/g, '$1');
-      
-      // Handle remaining text macros
-      latex = latex.replace(/text\{([^}]+)\}/g, '$1');
+      // Handle text inside LaTeX
+      latex = latex.replace(/\\text\s*{([^}]+)}/g, '$1');
+
+      // Handle overline and underline
+      latex = latex.replace(/\\overline\s*{([^}]+)}/g, '̅$1̅');
+      latex = latex.replace(/\\underline\s*{([^}]+)}/g, '_$1_');
+
+      // Handle cases notation
+      latex = latex.replace(/\\begin\s*{cases}(.*?)\\end\s*{cases}/gs, (match, cases) => {
+        const casesList = cases.split('\\\\').map(c => c.trim()).filter(Boolean);
+        return casesList.map(c => {
+          const parts = c.split('&');
+          return `${parts[0].trim()} if ${parts[1] ? parts[1].trim() : ''}`;
+        }).join(', ');
+      });
+
+      // Handle derivatives
+      latex = latex.replace(/\\frac\s*{d}{dx}/g, 'd/dx');
+      latex = latex.replace(/\\frac\s*{\\partial}{\\partial\s*([^}]+)}/g, '∂/∂$1');
+
+      // Handle summation and integrals with various limit formats
+      latex = latex.replace(/\\sum\s*_({[^}]+}|[^{])\^({[^}]+}|[^{])/g, (match, sub, sup) => {
+        const lower = sub.startsWith('{') ? sub.slice(1, -1) : sub;
+        const upper = sup.startsWith('{') ? sup.slice(1, -1) : sup;
+        return `Σ${toSubscript(lower)}${toSuperscript(upper)}`;
+      });
+
+      latex = latex.replace(/\\int\s*_({[^}]+}|[^{])\^({[^}]+}|[^{])/g, (match, sub, sup) => {
+        const lower = sub.startsWith('{') ? sub.slice(1, -1) : sub;
+        const upper = sup.startsWith('{') ? sup.slice(1, -1) : sup;
+        return `∫${toSubscript(lower)}${toSuperscript(upper)}`;
+      });
+
+      // Handle accents
+      latex = latex.replace(/\\hat\s*{([^}]+)}/g, '^$1');
+      latex = latex.replace(/\\bar\s*{([^}]+)}/g, '̄$1');
+      latex = latex.replace(/\\vec\s*{([^}]+)}/g, '→$1');
 
       return latex;
     }
 
     // Initial cleaning
     let cleanSolution = solution
-      // Remove LaTeX environments
       .replace(/\\begin\{.*?\}/g, '')
       .replace(/\\end\{.*?\}/g, '')
-      // Clean up spacing and special characters
       .replace(/\\\\/g, ' ')
       .replace(/\\,/g, ' ')
       .replace(/\\!/g, '')
@@ -191,21 +216,16 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\quad/g, ' ')
       .replace(/\\qquad/g, ' ')
       .replace(/\\ /g, ' ')
-      // Remove dollar signs
       .replace(/\$\$/g, '')
       .replace(/\$(.*?)\$/g, '$1')
-      // Remove boxed environments
       .replace(/\\boxed\{([^}]*)\}/g, '$1')
       .replace(/\bboxed\{([^}]*)\}/g, '$1')
       .replace(/boxed|oxed/gi, '')
-      // Handle roots
       .replace(/\\sqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\bsqrt\s*{([^}]+)}/g, '√$1')
       .replace(/\\sqrt\s*\[([^\]]+)\]{([^}]+)}/g, '$1√$2')
-      // Handle logarithms
       .replace(/\\log\s*{([^}]+)}/g, 'log($1)')
       .replace(/\blog\s*{([^}]+)}/g, 'log($1)')
-      // Greek letters
       .replace(/\\pi/g, 'π')
       .replace(/\\theta/g, 'θ')
       .replace(/\\alpha/g, 'α')
@@ -216,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\omega/g, 'ω')
       .replace(/\\Delta/g, 'Δ')
       .replace(/\\Sigma/g, 'Σ')
-      // Math operators
       .replace(/\\geq/g, '≥')
       .replace(/\\leq/g, '≤')
       .replace(/\\neq/g, '≠')
@@ -224,23 +243,19 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\partial/g, '∂')
       .replace(/\\nabla/g, '∇')
       .replace(/\\infty/g, '∞')
-      // Brackets and delimiters
       .replace(/\\left\|([^|]+)\\right\|/g, '|$1|')
       .replace(/\\lfloor\s*(.*?)\s*\\rfloor/g, '⌊$1⌋')
       .replace(/\\lceil\s*(.*?)\s*\\rceil/g, '⌈$1⌉')
       .replace(/\\left\(/g, '(').replace(/\\right\)/g, ')')
       .replace(/\\left\[/g, '[').replace(/\\right\]/g, ']')
       .replace(/\\left\{/g, '{').replace(/\\right\}/g, '}')
-      // Math symbols
       .replace(/\\times/g, '×')
       .replace(/\\div/g, '÷')
       .replace(/\\cdot/g, '·')
       .replace(/\\pm/g, '±')
-      // Text commands
       .replace(/\\forall/g, 'for all')
       .replace(/\\slash/g, '/')
       .replace(/\\_/g, '_')
-      // Miscellaneous
       .replace(/\\([0-9a-zA-Z])/g, '$1')
       .replace(/\*/g, '×')
       .replace(/\n/g, '<br>')
@@ -257,9 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9]+)/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/_([a-zA-Z0-9]+)/g, (_, sub) => toSubscript(sub))
-      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`)
-      // Clean up any remaining curly braces
-      .replace(/{/g, '').replace(/}/g, '');
+      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`);
 
     return cleanSolution;
   }
