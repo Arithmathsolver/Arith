@@ -9,6 +9,7 @@ const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
 
+// Logger Setup
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -180,8 +181,15 @@ async function extractTextFromImage(imageBuffer) {
     const worker = await createWorker({
       logger: m => logger.info(`📜 OCR Log: ${m.status}`),
     });
+
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
+
+    await worker.setParameters({
+      tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=()[]{}.,^√π∞%<>|',
+      preserve_interword_spaces: '1',
+    });
+
     const { data: { text: rawText } } = await worker.recognize(enhancedImage);
     await worker.terminate();
 
@@ -199,12 +207,14 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
+// Express App
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -246,6 +256,11 @@ app.post('/api/ocr-preview', async (req, res) => {
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
+
+    await worker.setParameters({
+      tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=()[]{}.,^√π∞%<>|',
+      preserve_interword_spaces: '1',
+    });
 
     const { data: { text: rawText } } = await worker.recognize(enhancedImage);
     await worker.terminate();
