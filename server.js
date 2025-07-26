@@ -122,9 +122,13 @@ async function solveMathProblem(problem) {
 }
 
 function postProcessMathText(text) {
-  // Light cleanup only – AI handles the real fix
   return text
     .replace(/\s{2,}/g, ' ')
+    .replace(/(\d)([a-zA-Z])/g, '$1 $2') // 2x → 2 x
+    .replace(/([a-zA-Z])(\d)/g, '$1^$2') // x2 → x^2
+    .replace(/(?<=\d)\s*\/\s*(?=\d)/g, '/') // 1 / 2 → 1/2
+    .replace(/[\u221A]/g, '√') // Replace unicode root if any
+    .replace(/_/g, '') // Clean subscript underscores if Tesseract misreads
     .trim();
 }
 
@@ -142,10 +146,8 @@ Instructions:
   - pi → π
   - O → 0, l → 1
   - Extra or missing minus/plus signs
-- Preserve structure, brackets, symbols
-- If the input is a **full math question**, rewrite it exactly as intended.
-
-Only return the corrected math expression or full question.
+  - Fix broken combined fractions or subscripts like a_{i+1}
+- Preserve structure, brackets, and math notation
 
 OCR Text:
 """${rawText}"""
@@ -176,9 +178,12 @@ async function extractTextFromImage(imageBuffer) {
       .grayscale()
       .normalize()
       .resize({ width: 1000 })
+      .sharpen()
       .toBuffer();
 
-    const worker = await createWorker();
+    const worker = await createWorker({
+      logger: m => logger.info(`📜 OCR Log: ${m.status}`),
+    });
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
     const { data: { text: rawText } } = await worker.recognize(enhancedImage);
@@ -239,6 +244,7 @@ app.post('/api/ocr-preview', async (req, res) => {
       .grayscale()
       .normalize()
       .resize({ width: 1000 })
+      .sharpen()
       .toBuffer();
 
     const worker = await createWorker();
@@ -249,16 +255,16 @@ app.post('/api/ocr-preview', async (req, res) => {
     await worker.terminate();
 
     const postProcessed = postProcessMathText(rawText);
-    const refined = await refineMathTextWithAI(postProcessed);
+    const corrected = await refineMathTextWithAI(postProcessed);
 
     logger.info(`🖼️ Preview OCR Raw: ${rawText}`);
     logger.info(`🧼 Preview Post-Processed: ${postProcessed}`);
-    logger.info(`✅ Preview AI Refined: ${refined}`);
+    logger.info(`✅ Preview AI Refined: ${corrected}`);
 
     res.json({
       raw: rawText.trim(),
       cleaned: postProcessed,
-      corrected: refined
+      corrected
     });
   } catch (error) {
     logger.error(`❌ OCR Preview Error: ${error.message}`);
