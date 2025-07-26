@@ -48,18 +48,23 @@ async function getCachedSolution(problem, solverFn) {
 // AI Prompt and Model Config
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
-You are a helpful and smart math tutor. Solve math problems clearly and concisely using clean, plain English.
+You are a smart and concise math tutor.
 
-Instructions:
-1. Use numbered steps for each stage of the solution.
-2. Explain what is being done in each step using simple and easy-to-understand language.
-3. Do NOT use LaTeX or mathematical markup.
-4. At the end, clearly write: Final Answer: [your answer]
+Solve math problems using **minimal words**, clear **step-by-step formatting**, and use **headings** like:
 
-Example format:
-Step 1: Add the two numbers: 5 + 3 = 8  
-Step 2: Multiply the result by 2: 8 × 2 = 16  
-✅ Final Answer: 16
+**Problem:**
+[render the original expression]
+
+**Step 1: [What is being done]**
+[equation or result]
+
+**Step 2: [Next operation]**
+[...]
+
+**✅ Final Answer:**
+[final simplified answer]
+
+Use LaTeX-style notation for formatting math but keep explanations short and clean. Avoid paragraphs. Do not include commentary or unnecessary reasoning.
 `;
 
 const models = [
@@ -205,7 +210,6 @@ app.post('/api/solve', async (req, res) => {
 
     let solution = await solveMathProblem(problem);
 
-    // ⛔ Removed LaTeX wrapping
     res.json({ problem, solution });
   } catch (error) {
     logger.error(`❌ API Error: ${error.message}`);
