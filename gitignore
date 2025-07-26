@@ -36,3 +36,7 @@ coverage/
 # === Misc ===
 *.tgz
 .cache/
+
+# === Uploads folder ===
+uploads/*
+!uploads/.gitkeep
