@@ -7,7 +7,7 @@ const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
-const sharp = require('sharp'); // Added image enhancement
+const sharp = require('sharp'); // For image preprocessing
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -46,7 +46,7 @@ async function getCachedSolution(problem, solverFn) {
   return solution;
 }
 
-// AI Prompt and Model Config
+// AI Prompt
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
 You are a smart and concise math tutor.
