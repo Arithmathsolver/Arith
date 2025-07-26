@@ -1,16 +1,14 @@
-version: "1"
 services:
-  - name: arithmathsolver
-    type: web
+  - type: web
+    name: arith-backend
     env: docker
     plan: free
+    branch: main
+    repo: https://github.com/YOUR_USERNAME/YOUR_REPO
     dockerfilePath: ./Dockerfile
-    buildCommand: ""
-    startCommand: "node server.js"
     envVars:
       - key: TOGETHER_API_KEY
-        value: YOUR_KEY_HERE
-      - key: OCR_ENGINE
-        value: trocr
-      - key: CACHE_ENABLED
-        value: true
+        sync: false
+      - key: PORT
+        value: 10000
+
