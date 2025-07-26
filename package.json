@@ -1,7 +1,7 @@
 {
   "name": "math-solver-backend",
-  "version": "1.1.0",
-  "description": "Backend server for solving math problems using OCR, AI text refinement, and Together AI models.",
+  "version": "1.2.0",
+  "description": "Backend server for solving math problems using OCR.Space, AI text refinement, and Together AI models.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,8 +13,7 @@
     "AI",
     "OCR",
     "TogetherAI",
-    "Tesseract",
-    "TrOCR",
+    "OCR.space",
     "Math Problem Solver",
     "GPT",
     "Math OCR",
@@ -29,9 +28,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
     "node-cache": "^5.1.2",
     "sharp": "^0.33.4",
-    "tesseract.js": "^4.1.1",
     "winston": "^3.11.0"
   },
   "devDependencies": {
