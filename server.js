@@ -8,7 +8,6 @@ const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
-const { exec } = require('child_process');
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -171,21 +170,25 @@ async function extractTextFromImage(filePath) {
 
     fs.writeFileSync(filePath, enhancedImage);
 
-    const ocrOutput = await new Promise((resolve, reject) => {
-      exec(`python3 extractText.py "${filePath}"`, (error, stdout, stderr) => {
-        fs.unlinkSync(filePath);
-        if (error) {
-          logger.error(`❌ TrOCR Error: ${stderr || error.message}`);
-          return reject(new Error('Failed to extract text using TrOCR'));
-        }
-        resolve(stdout.trim());
-      });
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(filePath));
+    formData.append('language', 'eng');
+    formData.append('isOverlayRequired', 'false');
+
+    const response = await axios.post('https://api.ocr.space/parse/image', formData, {
+      headers: {
+        ...formData.getHeaders(),
+        apikey: process.env.OCR_SPACE_API_KEY
+      }
     });
 
-    const postProcessed = postProcessMathText(ocrOutput);
+    fs.unlinkSync(filePath);
+
+    const rawText = response.data?.ParsedResults?.[0]?.ParsedText || '';
+    const postProcessed = postProcessMathText(rawText);
     const refined = await refineMathTextWithAI(postProcessed);
 
-    logger.info(`🖼️ OCR Raw (TrOCR): ${ocrOutput}`);
+    logger.info(`🖼️ OCR Raw (OCR.space): ${rawText}`);
     logger.info(`🧹 Post-Processed: ${postProcessed}`);
     logger.info(`🤖 AI Refined: ${refined}`);
 
