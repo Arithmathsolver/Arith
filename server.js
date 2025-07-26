@@ -105,8 +105,16 @@ async function solveMathProblem(problem) {
       try {
         let result = await tryModel(model, problem);
 
-        // Replace ×× with bold markdown
-        result = result.replace(/××(.*?)××/g, (_, text) => `**${text.trim()}**`);
+        // Replace **Step X: ...** with black HTML bold
+        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) => {
+          return `<strong style="color:black">Step ${num}: ${desc}</strong>`;
+        });
+
+        // Replace final answer heading
+        result = result.replace(/\*\*✅ Final Answer:\*\*/g, `<strong style="color:green">✅ Final Answer:</strong>`);
+
+        // Replace other bold text
+        result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);
 
         return result;
       } catch (err) {
@@ -117,7 +125,7 @@ async function solveMathProblem(problem) {
   });
 }
 
-// --- Post-Processing Logic ---
+// Post-Processing
 function postProcessMathText(text) {
   return text
     .replace(/\bV\b/g, '√')
@@ -169,7 +177,7 @@ Return only the fully corrected text, no extra commentary or explanation.
   return response.data.choices[0].message.content.trim();
 }
 
-// --- OCR Processing ---
+// OCR Function
 async function extractTextFromImage(imageBuffer) {
   try {
     const worker = await createWorker();
@@ -192,7 +200,7 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
-// Express App Setup
+// Express Setup
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -203,7 +211,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- API Routes ---
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
@@ -218,7 +225,6 @@ app.post('/api/solve', async (req, res) => {
     }
 
     let solution = await solveMathProblem(problem);
-
     res.json({ problem, solution });
   } catch (error) {
     logger.error(`❌ API Error: ${error.message}`);
