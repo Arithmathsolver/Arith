@@ -41,6 +41,15 @@
     .articles-list a:hover {
       text-decoration: underline;
     }
+
+    /* Bold formatting inside solution output */
+    #solutionOutput strong {
+      display: block;
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-top: 15px;
+      color: #222;
+    }
   </style>
 
   <!-- Google AdSense Code -->
@@ -51,8 +60,8 @@
   <script>
     window.MathJax = {
       tex: {
-        inlineMath: [['\', '\']],
-        displayMath: [['\', '\']],
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
         processEscapes: true,
         packages: { '[+]': ['base', 'ams', 'mhchem'] },
         macros: {
@@ -107,7 +116,7 @@
             <label for="imageUpload" class="upload-btn">
               <span>Upload Image</span>
             </label>
-            <!-- Added image preview container (only change made) -->
+            <!-- Added image preview container -->
             <div id="imagePreview" style="display: none;"></div>
           </div>
 
