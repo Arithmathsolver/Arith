@@ -9,13 +9,13 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OCR_ENGINE=trocr           # Updated to use TrOCR
+      - OCR_ENGINE=trocr
       - CACHE_ENABLED=true
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
     volumes:
       - ./backend:/app
     depends_on:
-      - trocr-deps                 # Wait for trocr deps to be installed (optional)
+      - trocr-deps
     restart: unless-stopped
 
   frontend:
@@ -31,7 +31,7 @@ services:
       - backend
     restart: unless-stopped
 
-  ocr-service:
+  ocr-service: # Optional (for fallback to tesseract.js OCR)
     image: tesseractshadow/tesseract4re
     ports:
       - "8080:8080"
