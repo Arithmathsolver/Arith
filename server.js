@@ -7,6 +7,7 @@ const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
+const sharp = require('sharp'); // Added image enhancement
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -105,15 +106,10 @@ async function solveMathProblem(problem) {
       try {
         let result = await tryModel(model, problem);
 
-        // Replace **Step X: ...** with black HTML bold
         result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) => {
           return `<strong style="color:black">Step ${num}: ${desc}</strong>`;
         });
-
-        // Replace final answer heading
         result = result.replace(/\*\*✅ Final Answer:\*\*/g, `<strong style="color:green">✅ Final Answer:</strong>`);
-
-        // Replace other bold text
         result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);
 
         return result;
@@ -125,7 +121,6 @@ async function solveMathProblem(problem) {
   });
 }
 
-// Post-Processing
 function postProcessMathText(text) {
   return text
     .replace(/\bV\b/g, '√')
@@ -139,21 +134,17 @@ function postProcessMathText(text) {
 }
 
 async function refineMathTextWithAI(rawText) {
-  const prompt = `
-You are an expert OCR correction AI. The following text was extracted from an image and contains math symbols mixed with text. Some symbols and words may be wrong due to OCR errors.
+  const refinedPrompt = `
+You are a math-aware OCR correction assistant.
 
-Your tasks:
-1. Correct math symbols: replace V with √, pi or n with π when appropriate, O with 0, l with 1, etc.
-2. Correct common English words that might be misspelled due to OCR.
-3. Preserve mathematical expressions, symbols, and their placement.
-4. Format the corrected output clearly and coherently without changing the meaning.
+Take the raw OCR text below and:
+- Fix all math symbols (e.g., V → √, x → ×, O → 0)
+- Fix common OCR word errors
+- Preserve parentheses and math structure
+- Output only the clean corrected math expression
 
-Here is the raw OCR text:
-""" 
-${rawText}
-"""
-
-Return only the fully corrected text, no extra commentary or explanation.
+Raw OCR:
+"""${rawText}"""
 `;
 
   const response = await axios.post(
@@ -161,7 +152,7 @@ Return only the fully corrected text, no extra commentary or explanation.
     {
       model: "meta-llama/Llama-3-8b-chat-hf",
       messages: [
-        { role: "system", content: prompt }
+        { role: "system", content: refinedPrompt }
       ],
       temperature: 0,
       max_tokens: 600
@@ -177,13 +168,18 @@ Return only the fully corrected text, no extra commentary or explanation.
   return response.data.choices[0].message.content.trim();
 }
 
-// OCR Function
 async function extractTextFromImage(imageBuffer) {
   try {
+    const enhancedImage = await sharp(imageBuffer)
+      .grayscale()
+      .normalize()
+      .resize({ width: 1000 })
+      .toBuffer();
+
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
-    const { data: { text: rawText } } = await worker.recognize(imageBuffer);
+    const { data: { text: rawText } } = await worker.recognize(enhancedImage);
     await worker.terminate();
 
     const postProcessed = postProcessMathText(rawText);
@@ -200,7 +196,6 @@ async function extractTextFromImage(imageBuffer) {
   }
 }
 
-// Express Setup
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -238,11 +233,17 @@ app.post('/api/ocr-preview', async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
+    const enhancedImage = await sharp(req.files.image.data)
+      .grayscale()
+      .normalize()
+      .resize({ width: 1000 })
+      .toBuffer();
+
     const worker = await createWorker();
     await worker.loadLanguage('eng');
     await worker.initialize('eng');
 
-    const { data: { text: rawText } } = await worker.recognize(req.files.image.data);
+    const { data: { text: rawText } } = await worker.recognize(enhancedImage);
     await worker.terminate();
 
     const postProcessed = postProcessMathText(rawText);
@@ -273,7 +274,6 @@ app.get('/check', async (req, res) => {
   }
 });
 
-// Start Server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
