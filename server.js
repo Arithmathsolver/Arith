@@ -7,9 +7,8 @@ const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
-const sharp = require('sharp'); // For image preprocessing
+const sharp = require('sharp');
 
-// Logger Setup
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -23,13 +22,11 @@ const logger = winston.createLogger({
   ]
 });
 
-// Validate API Key
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
   process.exit(1);
 }
 
-// Cache Setup
 const cache = new NodeCache({ stdTTL: 3600 });
 function getCacheKey(problem) {
   return `math_solution:${problem.trim().toLowerCase()}`;
@@ -46,7 +43,6 @@ async function getCachedSolution(problem, solverFn) {
   return solution;
 }
 
-// AI Prompt
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
 You are a smart and concise math tutor.
@@ -124,11 +120,11 @@ async function solveMathProblem(problem) {
 function postProcessMathText(text) {
   return text
     .replace(/\s{2,}/g, ' ')
-    .replace(/(\d)([a-zA-Z])/g, '$1 $2') // 2x → 2 x
-    .replace(/([a-zA-Z])(\d)/g, '$1^$2') // x2 → x^2
-    .replace(/(?<=\d)\s*\/\s*(?=\d)/g, '/') // 1 / 2 → 1/2
-    .replace(/[\u221A]/g, '√') // Replace unicode root if any
-    .replace(/_/g, '') // Clean subscript underscores if Tesseract misreads
+    .replace(/(\d)([a-zA-Z])/g, '$1 $2')
+    .replace(/([a-zA-Z])(\d)/g, '$1^$2')
+    .replace(/(?<=\d)\s*\/\s*(?=\d)/g, '/')
+    .replace(/[\u221A]/g, '√')
+    .replace(/_/g, '')
     .trim();
 }
 
