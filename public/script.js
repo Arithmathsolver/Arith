@@ -137,40 +137,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function processLatex(latex) {
-      // Handle exponents with parentheses
       latex = latex.replace(/(\([^)]+\))\^({[^}]+}|[^{])/g, (match, base, exp) => {
         const exponent = exp.startsWith('{') ? exp.slice(1, -1) : exp;
         return base + toSuperscript(exponent);
       });
 
-      // Handle subscripts with expressions
       latex = latex.replace(/_({[^}]+}|[^{])/g, (match, sub) => {
         const subscript = sub.startsWith('{') ? sub.slice(1, -1) : sub;
         return toSubscript(subscript);
       });
 
-      // Handle multi-level fractions recursively
       latex = latex.replace(/\\frac\s*{([^}]+)}{([^}]+)}/g, (match, num, den) => {
         return `(${processLatex(num)} / ${processLatex(den)})`;
       });
 
-      // Handle trigonometric functions
       latex = latex.replace(/\\(sin|cos|tan|csc|sec|cot)\s*{([^}]+)}/gi, '$1($2)');
-
-      // Handle limits
       latex = latex.replace(/\\lim_({[^}]+}|[^{])\s*([^\\]+)?/g, (match, sub, expr) => {
         const limVar = sub.startsWith('{') ? sub.slice(1, -1) : sub;
         return `lim${toSubscript(limVar)}${expr ? ' ' + expr.trim() : ''}`;
       });
 
-      // Handle text inside LaTeX
       latex = latex.replace(/\\text\s*{([^}]+)}/g, '$1');
-
-      // Handle overline and underline
       latex = latex.replace(/\\overline\s*{([^}]+)}/g, '̅$1̅');
       latex = latex.replace(/\\underline\s*{([^}]+)}/g, '_$1_');
 
-      // Handle cases notation
       latex = latex.replace(/\\begin\s*{cases}(.*?)\\end\s*{cases}/gs, (match, cases) => {
         const casesList = cases.split('\\\\').map(c => c.trim()).filter(Boolean);
         return casesList.map(c => {
@@ -179,11 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join(', ');
       });
 
-      // Handle derivatives
       latex = latex.replace(/\\frac\s*{d}{dx}/g, 'd/dx');
       latex = latex.replace(/\\frac\s*{\\partial}{\\partial\s*([^}]+)}/g, '∂/∂$1');
 
-      // Handle summation and integrals with various limit formats
       latex = latex.replace(/\\sum\s*_({[^}]+}|[^{])\^({[^}]+}|[^{])/g, (match, sub, sup) => {
         const lower = sub.startsWith('{') ? sub.slice(1, -1) : sub;
         const upper = sup.startsWith('{') ? sup.slice(1, -1) : sup;
@@ -196,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `∫${toSubscript(lower)}${toSuperscript(upper)}`;
       });
 
-      // Handle accents
       latex = latex.replace(/\\hat\s*{([^}]+)}/g, '^$1');
       latex = latex.replace(/\\bar\s*{([^}]+)}/g, '̄$1');
       latex = latex.replace(/\\vec\s*{([^}]+)}/g, '→$1');
@@ -204,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return latex;
     }
 
-    // Initial cleaning
     let cleanSolution = solution
       .replace(/\\begin\{.*?\}/g, '')
       .replace(/\\end\{.*?\}/g, '')
@@ -263,16 +249,15 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\\+/g, '')
       .trim();
 
-    // Process the cleaned solution with our enhanced LaTeX handling
     cleanSolution = processLatex(cleanSolution);
 
-    // Additional simple replacements
     cleanSolution = cleanSolution
       .replace(/([a-zA-Z0-9])\^2\b/g, '$1²')
       .replace(/([a-zA-Z0-9])\^3\b/g, '$1³')
       .replace(/([a-zA-Z0-9])\^([a-zA-Z0-9]+)/g, (_, base, exp) => base + toSuperscript(exp))
       .replace(/_([a-zA-Z0-9]+)/g, (_, sub) => toSubscript(sub))
-      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`);
+      .replace(/_([0-9]+)\(([^)]+)\)/g, (_, base, arg) => `log<sub>${base}</sub>(${arg})`)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); // ✅ BOLD support added here
 
     return cleanSolution;
   }
