@@ -122,13 +122,8 @@ async function solveMathProblem(problem) {
 }
 
 function postProcessMathText(text) {
+  // Light cleanup only – AI handles the real fix
   return text
-    .replace(/\bV\b/g, '√')
-    .replace(/\bpi\b/gi, 'π')
-    .replace(/n\s*=\s*\d+/gi, 'π')
-    .replace(/O/g, '0')
-    .replace(/l/g, '1')
-    .replace(/\/\s*/g, '/')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
@@ -137,13 +132,22 @@ async function refineMathTextWithAI(rawText) {
   const refinedPrompt = `
 You are a math-aware OCR correction assistant.
 
-Take the raw OCR text below and:
-- Fix all math symbols (e.g., V → √, x → ×, O → 0)
-- Fix common OCR word errors
-- Preserve parentheses and math structure
-- Output only the clean corrected math expression
+A user has scanned a handwritten or typed math question using OCR. Your job is to correct all math-related OCR mistakes and return the properly written math expression or question.
 
-Raw OCR:
+Instructions:
+- Interpret what the OCR *meant*, not just what it says.
+- Fix common OCR issues:
+  - √222 or V222 might be 2x^2
+  - x2 → x^2, 3x2 → 3x^2
+  - pi → π
+  - O → 0, l → 1
+  - Extra or missing minus/plus signs
+- Preserve structure, brackets, symbols
+- If the input is a **full math question**, rewrite it exactly as intended.
+
+Only return the corrected math expression or full question.
+
+OCR Text:
 """${rawText}"""
 `;
 
@@ -151,9 +155,7 @@ Raw OCR:
     TOGETHER_API_URL,
     {
       model: "meta-llama/Llama-3-8b-chat-hf",
-      messages: [
-        { role: "system", content: refinedPrompt }
-      ],
+      messages: [{ role: "system", content: refinedPrompt }],
       temperature: 0,
       max_tokens: 600
     },
