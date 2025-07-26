@@ -150,21 +150,21 @@ OCR Text:
   return response.data.choices[0].message.content.trim();
 }
 
-async function extractTextFromImage(imageBuffer) {
+async function extractTextFromImage(filePath) {
   try {
-    const enhancedImage = await sharp(imageBuffer)
+    const buffer = fs.readFileSync(filePath);
+    const enhancedImage = await sharp(buffer)
       .grayscale()
       .normalize()
       .resize({ width: 1000 })
       .sharpen()
       .toBuffer();
 
-    const tempImagePath = path.join(__dirname, 'uploads', `img_${Date.now()}.jpg`);
-    fs.writeFileSync(tempImagePath, enhancedImage);
+    fs.writeFileSync(filePath, enhancedImage);
 
     const ocrOutput = await new Promise((resolve, reject) => {
-      exec(`python3 extractText.py "${tempImagePath}"`, (error, stdout, stderr) => {
-        fs.unlinkSync(tempImagePath);
+      exec(`python3 extractText.py "${filePath}"`, (error, stdout, stderr) => {
+        fs.unlinkSync(filePath);
         if (error) {
           logger.error(`❌ TrOCR Error: ${stderr || error.message}`);
           return reject(new Error('Failed to extract text using TrOCR'));
@@ -204,7 +204,9 @@ app.post('/api/solve', async (req, res) => {
     let problem = req.body.problem;
 
     if (req.files?.image) {
-      problem = await extractTextFromImage(req.files.image.data);
+      const tempPath = path.join(__dirname, 'uploads', `upload_${Date.now()}.jpg`);
+      fs.writeFileSync(tempPath, req.files.image.data);
+      problem = await extractTextFromImage(tempPath);
       logger.info(`🖼️ Final OCR-processed text: ${problem}`);
     }
 
@@ -226,7 +228,9 @@ app.post('/api/ocr-preview', async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const text = await extractTextFromImage(req.files.image.data);
+    const tempPath = path.join(__dirname, 'uploads', `preview_${Date.now()}.jpg`);
+    fs.writeFileSync(tempPath, req.files.image.data);
+    const text = await extractTextFromImage(tempPath);
 
     res.json({
       raw: text,
