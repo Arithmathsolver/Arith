@@ -8,6 +8,7 @@ const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
+const FormData = require('form-data'); // REQUIRED for OCR.Space
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(__dirname, 'uploads');
