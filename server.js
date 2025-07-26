@@ -2,12 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
-const { createWorker } = require('tesseract.js');
 const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
+const fs = require('fs');
+const { exec } = require('child_process');
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -45,28 +46,21 @@ async function getCachedSolution(problem, solverFn) {
 }
 
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
-const SYSTEM_PROMPT = `
-You are a smart and concise math tutor.
-
+const SYSTEM_PROMPT = `You are a smart and concise math tutor.
 Return clean step-by-step math solutions using this exact structure:
-
 **Problem:**
 [original math expression]
-
 **Step 1: [What is being done]**
 [equation or transformation]
-
 **Step 2: [Next operation]**
 [...]
-
 **✅ Final Answer:**
 [final result]
-
 Rules:
 - Do not explain anything in paragraphs.
 - Use **bold headings** exactly as shown.
 - Each step should start with "**Step X: [short heading]**" and follow with clear LaTeX or simple math.
-- Keep it minimal, avoid extra words or commentary.
+- Keep it minimal, avoid extra words or commentary
 `;
 
 const models = [
@@ -132,20 +126,7 @@ function postProcessMathText(text) {
 async function refineMathTextWithAI(rawText) {
   const refinedPrompt = `
 You are a math-aware OCR correction assistant.
-
 A user has scanned a handwritten or typed math question using OCR. Your job is to correct all math-related OCR mistakes and return the properly written math expression or question.
-
-Instructions:
-- Interpret what the OCR *meant*, not just what it says.
-- Fix common OCR issues:
-  - √222 or V222 might be 2x^2
-  - x2 → x^2, 3x2 → 3x^2
-  - pi → π
-  - O → 0, l → 1
-  - Extra or missing minus/plus signs
-  - Fix broken combined fractions or subscripts like a_{i+1}
-- Preserve structure, brackets, and math notation
-
 OCR Text:
 """${rawText}"""
 `;
@@ -178,25 +159,24 @@ async function extractTextFromImage(imageBuffer) {
       .sharpen()
       .toBuffer();
 
-    const worker = await createWorker({
-      logger: m => logger.info(`📜 OCR Log: ${m.status}`),
+    const tempImagePath = path.join(__dirname, 'uploads', `img_${Date.now()}.jpg`);
+    fs.writeFileSync(tempImagePath, enhancedImage);
+
+    const ocrOutput = await new Promise((resolve, reject) => {
+      exec(`python3 extractText.py "${tempImagePath}"`, (error, stdout, stderr) => {
+        fs.unlinkSync(tempImagePath);
+        if (error) {
+          logger.error(`❌ TrOCR Error: ${stderr || error.message}`);
+          return reject(new Error('Failed to extract text using TrOCR'));
+        }
+        resolve(stdout.trim());
+      });
     });
 
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
-
-    await worker.setParameters({
-      tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=()[]{}.,^√π∞%<>|',
-      preserve_interword_spaces: '1',
-    });
-
-    const { data: { text: rawText } } = await worker.recognize(enhancedImage);
-    await worker.terminate();
-
-    const postProcessed = postProcessMathText(rawText);
+    const postProcessed = postProcessMathText(ocrOutput);
     const refined = await refineMathTextWithAI(postProcessed);
 
-    logger.info(`🖼️ OCR Raw: ${rawText}`);
+    logger.info(`🖼️ OCR Raw (TrOCR): ${ocrOutput}`);
     logger.info(`🧹 Post-Processed: ${postProcessed}`);
     logger.info(`🤖 AI Refined: ${refined}`);
 
@@ -246,36 +226,12 @@ app.post('/api/ocr-preview', async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const enhancedImage = await sharp(req.files.image.data)
-      .grayscale()
-      .normalize()
-      .resize({ width: 1000 })
-      .sharpen()
-      .toBuffer();
-
-    const worker = await createWorker();
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
-
-    await worker.setParameters({
-      tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=()[]{}.,^√π∞%<>|',
-      preserve_interword_spaces: '1',
-    });
-
-    const { data: { text: rawText } } = await worker.recognize(enhancedImage);
-    await worker.terminate();
-
-    const postProcessed = postProcessMathText(rawText);
-    const corrected = await refineMathTextWithAI(postProcessed);
-
-    logger.info(`🖼️ Preview OCR Raw: ${rawText}`);
-    logger.info(`🧼 Preview Post-Processed: ${postProcessed}`);
-    logger.info(`✅ Preview AI Refined: ${corrected}`);
+    const text = await extractTextFromImage(req.files.image.data);
 
     res.json({
-      raw: rawText.trim(),
-      cleaned: postProcessed,
-      corrected
+      raw: text,
+      cleaned: text,
+      corrected: text
     });
   } catch (error) {
     logger.error(`❌ OCR Preview Error: ${error.message}`);
