@@ -1,26 +1,24 @@
-# Base image with Node.js + Python
-FROM node:18-slim
+# Use Python 3.10 as base
+FROM python:3.10
 
-# Install Python and system dependencies
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-dev libglib2.0-0 libsm6 libxrender1 libxext6 && \
-    pip install torch torchvision transformers Pillow
+# Install Node.js (for frontend build if needed)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
 
 # Set working directory
 WORKDIR /app
 
-# Copy backend files
-COPY backend/package*.json ./
-RUN npm install
-COPY backend ./
+# Copy all files
+COPY . .
 
-# Copy frontend and build it
-COPY frontend/package*.json ./frontend/
-RUN cd frontend && npm install && npm run build
-COPY frontend /app/frontend
+# Install Python deps
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Move frontend build to backend public
-RUN mkdir -p public && cp -r frontend/dist/* public/
+# Install Node deps if needed
+RUN if [ -f package.json ]; then yarn install; fi
 
-EXPOSE 3001
-CMD ["node", "server.js"]
+# Expose port (if Flask)
+EXPOSE 5000
+
+# Start your server
+CMD ["python", "server.py"]
