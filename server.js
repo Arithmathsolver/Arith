@@ -10,7 +10,13 @@ const sharp = require('sharp');
 const fs = require('fs');
 const { exec } = require('child_process');
 
-// Logger Setup
+// Ensure uploads folder exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+// Logger setup
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -24,15 +30,18 @@ const logger = winston.createLogger({
   ]
 });
 
+// API Key check
 if (!process.env.TOGETHER_API_KEY) {
-  logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
+  logger.error('❌ Missing TOGETHER_API_KEY');
   process.exit(1);
 }
 
 const cache = new NodeCache({ stdTTL: 3600 });
+
 function getCacheKey(problem) {
   return `math_solution:${problem.trim().toLowerCase()}`;
 }
+
 async function getCachedSolution(problem, solverFn) {
   const key = getCacheKey(problem);
   const cached = cache.get(key);
@@ -97,10 +106,11 @@ async function solveMathProblem(problem) {
       try {
         let result = await tryModel(model, problem);
 
-        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) => {
-          return `<strong style="color:black">Step ${num}: ${desc}</strong>`;
-        });
-        result = result.replace(/\*\*✅ Final Answer:\*\*/g, `<strong style="color:green">✅ Final Answer:</strong>`);
+        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) =>
+          `<strong style="color:black">Step ${num}: ${desc}</strong>`
+        );
+        result = result.replace(/\*\*✅ Final Answer:\*\*/g,
+          `<strong style="color:green">✅ Final Answer:</strong>`);
         result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);
 
         return result;
@@ -124,9 +134,8 @@ function postProcessMathText(text) {
 }
 
 async function refineMathTextWithAI(rawText) {
-  const refinedPrompt = `
-You are a math-aware OCR correction assistant.
-A user has scanned a handwritten or typed math question using OCR. Your job is to correct all math-related OCR mistakes and return the properly written math expression or question.
+  const refinedPrompt = `You are a math-aware OCR correction assistant.
+A user scanned a handwritten or typed math question using OCR. Correct all math-related OCR mistakes and return the cleaned math expression.
 OCR Text:
 """${rawText}"""
 `;
@@ -187,7 +196,7 @@ async function extractTextFromImage(filePath) {
   }
 }
 
-// Express App
+// Express app setup
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -207,17 +216,16 @@ app.post('/api/solve', async (req, res) => {
       const tempPath = path.join(__dirname, 'uploads', `upload_${Date.now()}.jpg`);
       fs.writeFileSync(tempPath, req.files.image.data);
       problem = await extractTextFromImage(tempPath);
-      logger.info(`🖼️ Final OCR-processed text: ${problem}`);
     }
 
     if (!problem) {
       return res.status(400).json({ error: 'No problem provided' });
     }
 
-    let solution = await solveMathProblem(problem);
+    const solution = await solveMathProblem(problem);
     res.json({ problem, solution });
   } catch (error) {
-    logger.error(`❌ API Error: ${error.message}`);
+    logger.error(`❌ Solve API Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });
@@ -253,6 +261,7 @@ app.get('/check', async (req, res) => {
   }
 });
 
+// Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
