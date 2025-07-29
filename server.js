@@ -8,7 +8,6 @@ const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
-const FormData = require('form-data'); // REQUIRED for OCR.Space
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -33,6 +32,10 @@ const logger = winston.createLogger({
 // API Key check
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY');
+  process.exit(1);
+}
+if (!process.env.HUGGINGFACE_API_KEY) {
+  logger.error('❌ Missing HUGGINGFACE_API_KEY');
   process.exit(1);
 }
 
@@ -171,25 +174,26 @@ async function extractTextFromImage(filePath) {
 
     fs.writeFileSync(filePath, enhancedImage);
 
-    const formData = new FormData();
-    formData.append('file', fs.createReadStream(filePath));
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
+    const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
 
-    const response = await axios.post('https://api.ocr.space/parse/image', formData, {
-      headers: {
-        ...formData.getHeaders(),
-        apikey: process.env.OCR_SPACE_API_KEY
+    const response = await axios.post(
+      'https://api-inference.huggingface.co/models/microsoft/trocr-base-handwritten',
+      { inputs: imageBase64 },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
 
     fs.unlinkSync(filePath);
 
-    const rawText = response.data?.ParsedResults?.[0]?.ParsedText || '';
+    const rawText = response.data?.[0]?.generated_text || '';
     const postProcessed = postProcessMathText(rawText);
     const refined = await refineMathTextWithAI(postProcessed);
 
-    logger.info(`🖼️ OCR Raw (OCR.space): ${rawText}`);
+    logger.info(`🖼️ OCR Raw (HuggingFace): ${rawText}`);
     logger.info(`🧹 Post-Processed: ${postProcessed}`);
     logger.info(`🤖 AI Refined: ${refined}`);
 
