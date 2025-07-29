@@ -1,7 +1,7 @@
 {
   "name": "math-solver-backend",
-  "version": "1.2.0",
-  "description": "Backend server for solving math problems using OCR.Space, AI text refinement, and Together AI models.",
+  "version": "1.2.1",
+  "description": "Backend server for solving math problems using Hugging Face OCR, AI text refinement, and Together AI models.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,7 +13,7 @@
     "AI",
     "OCR",
     "TogetherAI",
-    "OCR.space",
+    "HuggingFace",
     "Math Problem Solver",
     "GPT",
     "Math OCR",
