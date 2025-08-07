@@ -174,15 +174,15 @@ async function extractTextFromImage(filePath) {
 
     fs.writeFileSync(filePath, enhancedImage);
 
-    const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
+    const imageBuffer = fs.readFileSync(filePath);
 
     const response = await axios.post(
       'https://api-inference.huggingface.co/models/microsoft/trocr-base-handwritten',
-      { inputs: imageBase64 },
+      imageBuffer,
       {
         headers: {
           Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/octet-stream'
         }
       }
     );
