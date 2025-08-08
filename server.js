@@ -8,6 +8,7 @@ const winston = require('winston');
 const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
+const { createWorker } = require('tesseract.js');
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -34,10 +35,6 @@ if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY');
   process.exit(1);
 }
-if (!process.env.HUGGINGFACE_API_KEY) {
-  logger.error('❌ Missing HUGGINGFACE_API_KEY');
-  process.exit(1);
-}
 
 const cache = new NodeCache({ stdTTL: 3600 });
 
@@ -60,19 +57,23 @@ async function getCachedSolution(problem, solverFn) {
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `You are a smart and concise math tutor.
 Return clean step-by-step math solutions using this exact structure:
-**Problem:**
+Problem:
 [original math expression]
-**Step 1: [What is being done]**
+Step 1: [What is being done]
 [equation or transformation]
-**Step 2: [Next operation]**
+Step 2: [Next operation]
 [...]
-**✅ Final Answer:**
+✅ Final Answer:
 [final result]
 Rules:
-- Do not explain anything in paragraphs.
-- Use **bold headings** exactly as shown.
-- Each step should start with "**Step X: [short heading]**" and follow with clear LaTeX or simple math.
-- Keep it minimal, avoid extra words or commentary
+
+Do not explain anything in paragraphs.
+
+Use bold headings exactly as shown.
+
+Each step should start with "Step X: [short heading]" and follow with clear LaTeX or simple math.
+
+Keep it minimal, avoid extra words or commentary
 `;
 
 const models = [
@@ -109,18 +110,18 @@ async function solveMathProblem(problem) {
       try {
         let result = await tryModel(model, problem);
 
-        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) =>
-          `<strong style="color:black">Step ${num}: ${desc}</strong>`
-        );
-        result = result.replace(/\*\*✅ Final Answer:\*\*/g,
-          `<strong style="color:green">✅ Final Answer:</strong>`);
-        result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);
+        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) =>  
+          `<strong style="color:black">Step ${num}: ${desc}</strong>`  
+        );  
+        result = result.replace(/\*\*✅ Final Answer:\*\*/g,  
+          `<strong style="color:green">✅ Final Answer:</strong>`);  
+        result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);  
 
-        return result;
-      } catch (err) {
-        logger.warn(`⚠️ Model ${model} failed: ${err.response?.data?.error?.message || err.message}`);
-      }
-    }
+        return result;  
+      } catch (err) {  
+        logger.warn(`⚠️ Model ${model} failed: ${err.response?.data?.error?.message || err.message}`);  
+      }  
+    }  
     throw new Error('Failed to get solution from any model');
   });
 }
@@ -136,12 +137,21 @@ function postProcessMathText(text) {
     .trim();
 }
 
+function formatMathpixStyle(text) {
+  // Mathpix-style formatting for common math expressions
+  return text
+    .replace(/(\d+)\s*\/\s*(\d+)/g, '\\frac{$1}{$2}') // Fractions
+    .replace(/(\w+)\^(\d+)/g, '$1^{$2}') // Exponents
+    .replace(/(\w+)_(\d+)/g, '$1_{$2}') // Subscripts
+    .replace(/sqrt\(([^)]+)\)/g, '\\sqrt{$1}') // Square roots
+    .replace(/([a-zA-Z])([a-zA-Z])/g, '$1 \\cdot $2') // Implied multiplication
+    .replace(/=/g, ' = ') // Space around equals
+    .replace(/([a-zA-Z])(\()/g, '$1$2') // Fix function calls
+    .replace(/(\))([a-zA-Z])/g, '$1$2'); // Fix parentheses
+}
+
 async function refineMathTextWithAI(rawText) {
-  const refinedPrompt = `You are a math-aware OCR correction assistant.
-A user scanned a handwritten or typed math question using OCR. Correct all math-related OCR mistakes and return the cleaned math expression.
-OCR Text:
-"""${rawText}"""
-`;
+  const refinedPrompt = `You are a math-aware OCR correction assistant. A user scanned a handwritten or typed math question using OCR. Correct all math-related OCR mistakes and return the cleaned math expression. OCR Text: """${rawText}"""`;
 
   const response = await axios.post(
     TOGETHER_API_URL,
@@ -164,40 +174,49 @@ OCR Text:
 
 async function extractTextFromImage(filePath) {
   try {
-    const buffer = fs.readFileSync(filePath);
-    const enhancedImage = await sharp(buffer)
-      .grayscale()
+    // Preprocess image with sharp
+    const processedImage = await sharp(filePath)
+      .greyscale()
+      .threshold(128) // Binarize
       .normalize()
-      .resize({ width: 1000 })
+      .resize({ width: 2000 }) // Higher resolution for math
       .sharpen()
       .toBuffer();
 
-    fs.writeFileSync(filePath, enhancedImage);
+    const worker = await createWorker({
+      logger: m => logger.debug(`Tesseract: ${m.status}`),
+    });
 
-    const imageBuffer = fs.readFileSync(filePath);
+    try {
+      await worker.load();
+      await worker.loadLanguage('math');
+      await worker.initialize('math');
+      
+      // Set Tesseract parameters for better math recognition
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6', // Assume a single uniform block of text
+        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-=()[]{}<>^_/\\*.,:;!?%&|',
+        preserve_interword_spaces: '1',
+      });
 
-    const response = await axios.post(
-      'https://api-inference.huggingface.co/models/microsoft/trocr-base-handwritten',
-      imageBuffer,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-          'Content-Type': 'application/octet-stream'
-        }
-      }
-    );
+      const { data: { text } } = await worker.recognize(processedImage);
+      await worker.terminate();
 
-    fs.unlinkSync(filePath);
+      const postProcessed = postProcessMathText(text);
+      const mathpixFormatted = formatMathpixStyle(postProcessed);
+      const refined = await refineMathTextWithAI(mathpixFormatted);
 
-    const rawText = response.data?.[0]?.generated_text || '';
-    const postProcessed = postProcessMathText(rawText);
-    const refined = await refineMathTextWithAI(postProcessed);
+      logger.info(`🖼️ OCR Raw (Tesseract): ${text}`);
+      logger.info(`🧹 Post-Processed: ${postProcessed}`);
+      logger.info(`📐 Mathpix Formatted: ${mathpixFormatted}`);
+      logger.info(`🤖 AI Refined: ${refined}`);
 
-    logger.info(`🖼️ OCR Raw (HuggingFace): ${rawText}`);
-    logger.info(`🧹 Post-Processed: ${postProcessed}`);
-    logger.info(`🤖 AI Refined: ${refined}`);
-
-    return refined;
+      fs.unlinkSync(filePath);
+      return refined;
+    } catch (err) {
+      await worker.terminate();
+      throw err;
+    }
   } catch (error) {
     logger.error(`❌ OCR Error: ${error.message}`);
     throw new Error('Failed to process image');
@@ -220,18 +239,19 @@ app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
 
-    if (req.files?.image) {
-      const tempPath = path.join(__dirname, 'uploads', `upload_${Date.now()}.jpg`);
-      fs.writeFileSync(tempPath, req.files.image.data);
-      problem = await extractTextFromImage(tempPath);
-    }
+    if (req.files?.image) {  
+      const tempPath = path.join(__dirname, 'uploads', `upload_${Date.now()}.jpg`);  
+      fs.writeFileSync(tempPath, req.files.image.data);  
+      problem = await extractTextFromImage(tempPath);  
+    }  
 
-    if (!problem) {
-      return res.status(400).json({ error: 'No problem provided' });
-    }
+    if (!problem) {  
+      return res.status(400).json({ error: 'No problem provided' });  
+    }  
 
-    const solution = await solveMathProblem(problem);
+    const solution = await solveMathProblem(problem);  
     res.json({ problem, solution });
+
   } catch (error) {
     logger.error(`❌ Solve API Error: ${error.message}`);
     res.status(500).json({ error: error.message });
@@ -244,15 +264,16 @@ app.post('/api/ocr-preview', async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const tempPath = path.join(__dirname, 'uploads', `preview_${Date.now()}.jpg`);
-    fs.writeFileSync(tempPath, req.files.image.data);
-    const text = await extractTextFromImage(tempPath);
+    const tempPath = path.join(__dirname, 'uploads', `preview_${Date.now()}.jpg`);  
+    fs.writeFileSync(tempPath, req.files.image.data);  
+    const text = await extractTextFromImage(tempPath);  
 
-    res.json({
-      raw: text,
-      cleaned: text,
-      corrected: text
+    res.json({  
+      raw: text,  
+      cleaned: text,  
+      corrected: text  
     });
+
   } catch (error) {
     logger.error(`❌ OCR Preview Error: ${error.message}`);
     res.status(500).json({ error: error.message });
