@@ -189,8 +189,8 @@ async function extractTextFromImage(filePath) {
 
     try {
       await worker.load();
-      await worker.loadLanguage('math');
-      await worker.initialize('math');
+      await worker.loadLanguage('equ'); // CHANGED FROM 'math' TO 'equ'
+      await worker.initialize('equ');   // CHANGED FROM 'math' TO 'equ'
       
       // Set Tesseract parameters for better math recognition
       await worker.setParameters({
