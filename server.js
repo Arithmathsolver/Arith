@@ -2,12 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
-const { createWorker } = require('tesseract.js');
+const { createWorker, PSM } = require('tesseract.js');
+const sharp = require('sharp');
 const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
-const sharp = require('sharp'); // ✅ Added sharp for preprocessing
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -23,6 +23,7 @@ const logger = winston.createLogger({
   ]
 });
 
+// Validate API Key
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('❌ Missing TOGETHER_API_KEY in environment variables');
   process.exit(1);
@@ -48,13 +49,27 @@ async function getCachedSolution(problem, solverFn) {
 // AI Prompt and Model Config
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/chat/completions';
 const SYSTEM_PROMPT = `
-You are an expert mathematics tutor that solves problems from primary to university level.
+You are a smart and concise math tutor.
+
+Return clean step-by-step math solutions using this exact structure:
+
+**Problem:**
+[original math expression]
+
+**Step 1: [What is being done]**
+[equation or transformation]
+
+**Step 2: [Next operation]**
+[...]
+
+**✅ Final Answer:**
+[final result]
+
 Rules:
-1. Provide step-by-step solutions.
-2. Use LaTeX for math expressions.
-3. Highlight key concepts.
-4. Box final answers: \\boxed{answer}
-5. Support: Arithmetic, Algebra, Calculus, Geometry, Statistics.
+- Do not explain anything in paragraphs.
+- Use **bold headings** exactly as shown.
+- Each step should start with "**Step X: [short heading]**" and follow with clear LaTeX or simple math.
+- Keep it minimal, avoid extra words or commentary.
 `;
 
 const models = [
@@ -89,7 +104,17 @@ async function solveMathProblem(problem) {
   return await getCachedSolution(problem, async () => {
     for (let model of models) {
       try {
-        return await tryModel(model, problem);
+        let result = await tryModel(model, problem);
+
+        result = result.replace(/\*\*Step (\d+):\s*(.*?)\*\*/g, (_, num, desc) => {
+          return `<strong style="color:black">Step ${num}: ${desc}</strong>`;
+        });
+
+        result = result.replace(/\*\*✅ Final Answer:\*\*/g, `<strong style="color:green">✅ Final Answer:</strong>`);
+
+        result = result.replace(/\*\*(.*?)\*\*/g, (_, txt) => `<strong>${txt}</strong>`);
+
+        return result;
       } catch (err) {
         logger.warn(`⚠️ Model ${model} failed: ${err.response?.data?.error?.message || err.message}`);
       }
@@ -98,57 +123,115 @@ async function solveMathProblem(problem) {
   });
 }
 
-// OCR Processing with worker mode + preprocessing
+// Post-Processing
+function postProcessMathText(text) {
+  return text
+    .replace(/\bV\b/g, '√')
+    .replace(/\bpi\b/gi, 'π')
+    .replace(/n\s*=\s*\d+/gi, 'π')
+    .replace(/O/g, '0')
+    .replace(/l/g, '1')
+    .replace(/\/\s*/g, '/')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+async function refineMathTextWithAI(rawText) {
+  const prompt = `
+You are an expert OCR correction AI. The following text was extracted from an image and contains math symbols mixed with text. Some symbols and words may be wrong due to OCR errors.
+
+Your tasks:
+1. Correct math symbols: replace V with √, pi or n with π when appropriate, O with 0, l with 1, etc.
+2. Correct common English words that might be misspelled due to OCR.
+3. Preserve mathematical expressions, symbols, and their placement.
+4. Format the corrected output clearly and coherently without changing the meaning.
+
+Here is the raw OCR text:
+""" 
+${rawText}
+"""
+
+Return only the fully corrected text, no extra commentary or explanation.
+`;
+
+  const response = await axios.post(
+    TOGETHER_API_URL,
+    {
+      model: "meta-llama/Llama-3-8b-chat-hf",
+      messages: [
+        { role: "system", content: prompt }
+      ],
+      temperature: 0,
+      max_tokens: 600
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  return response.data.choices[0].message.content.trim();
+}
+
+// OCR Function with worker mode + eng+equ
 async function extractTextFromImage(imageBuffer) {
   try {
-    // ✅ Preprocess image: grayscale + binarize + resize
-    const processedImage = await sharp(imageBuffer)
+    const image = await sharp(imageBuffer)
+      .resize({ width: 1500 })
       .grayscale()
-      .threshold(128) // binarization
-      .resize(2000, null, { fit: 'inside' }) // resize to improve OCR
+      .normalize()
       .toBuffer();
 
-    // ✅ Use Tesseract worker mode
     const worker = await createWorker({
-      workerPath: require('tesseract.js').workerPath(),
-      langPath: path.join(__dirname, 'traineddata'), // folder containing equ.traineddata
-      corePath: require('tesseract.js-core').workerPath(),
-      logger: m => console.log(m) // Optional progress log
+      workerPath: require.resolve('tesseract.js/dist/worker.min.js'),
+      corePath: require.resolve('tesseract.js-core/tesseract-core.wasm.js'),
+      logger: m => logger.info(`Tesseract: ${m.status} ${Math.round(m.progress * 100)}%`)
     });
 
-    await worker.loadLanguage('equ');
-    await worker.initialize('equ');
-    const { data: { text } } = await worker.recognize(processedImage);
+    await worker.loadLanguage('eng+equ');
+    await worker.initialize('eng+equ');
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      preserve_interword_spaces: '1'
+    });
+
+    const { data: { text: rawText } } = await worker.recognize(image);
     await worker.terminate();
 
-    return text.trim();
+    const postProcessed = postProcessMathText(rawText);
+    const refined = await refineMathTextWithAI(postProcessed);
+
+    logger.info(`🖼️ OCR Raw: ${rawText}`);
+    logger.info(`🧹 Post-Processed: ${postProcessed}`);
+    logger.info(`🤖 AI Refined: ${refined}`);
+
+    return refined;
   } catch (error) {
     logger.error(`❌ OCR Error: ${error.message}`);
     throw new Error('Failed to process image');
   }
 }
 
-// Express App Setup
+// Express Setup
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
-
-// Serve everything in public/
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// API Routes
 app.post('/api/solve', async (req, res) => {
   try {
     let problem = req.body.problem;
 
     if (req.files?.image) {
       problem = await extractTextFromImage(req.files.image.data);
-      logger.info(`🖼️ Extracted text: ${problem.substring(0, 100)}...`);
+      logger.info(`🖼️ Final OCR-processed text: ${problem}`);
     }
 
     if (!problem) {
@@ -156,15 +239,71 @@ app.post('/api/solve', async (req, res) => {
     }
 
     let solution = await solveMathProblem(problem);
-
     res.json({ problem, solution });
   } catch (error) {
-    logger.error(`❌ Solve API Error: ${error.message}`);
+    logger.error(`❌ API Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });
 
-const PORT = process.env.PORT || 3000;
+app.post('/api/ocr-preview', async (req, res) => {
+  try {
+    if (!req.files?.image) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const image = await sharp(req.files.image.data)
+      .resize({ width: 1500 })
+      .grayscale()
+      .normalize()
+      .toBuffer();
+
+    const worker = await createWorker({
+      workerPath: require.resolve('tesseract.js/dist/worker.min.js'),
+      corePath: require.resolve('tesseract.js-core/tesseract-core.wasm.js'),
+      logger: m => logger.info(`Tesseract: ${m.status} ${Math.round(m.progress * 100)}%`)
+    });
+
+    await worker.loadLanguage('eng+equ');
+    await worker.initialize('eng+equ');
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      preserve_interword_spaces: '1'
+    });
+
+    const { data: { text: rawText } } = await worker.recognize(image);
+    await worker.terminate();
+
+    const postProcessed = postProcessMathText(rawText);
+    const refined = await refineMathTextWithAI(postProcessed);
+
+    logger.info(`🖼️ Preview OCR Raw: ${rawText}`);
+    logger.info(`🧼 Preview Post-Processed: ${postProcessed}`);
+    logger.info(`✅ Preview AI Refined: ${refined}`);
+
+    res.json({
+      raw: rawText.trim(),
+      cleaned: postProcessed,
+      corrected: refined
+    });
+  } catch (error) {
+    logger.error(`❌ OCR Preview Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/check', async (req, res) => {
+  try {
+    const response = await tryModel(models[0], "What is 2 + 2?");
+    res.json({ ok: true, answer: response });
+  } catch (err) {
+    logger.error('❌ Check Endpoint Error:', err.response?.data || err.message);
+    res.status(500).json({ ok: false, error: err.response?.data || err.message });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
+  console.log(`➡️  Server ready at http://localhost:${PORT}`);
 });
