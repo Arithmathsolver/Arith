@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
@@ -8,6 +7,7 @@ const NodeCache = require('node-cache');
 const axios = require('axios');
 const winston = require('winston');
 const path = require('path');
+const sharp = require('sharp'); // ✅ Added sharp for preprocessing
 
 // Logger Setup
 const logger = winston.createLogger({
@@ -53,7 +53,7 @@ Rules:
 1. Provide step-by-step solutions.
 2. Use LaTeX for math expressions.
 3. Highlight key concepts.
-4. Box final answers: \boxed{answer}
+4. Box final answers: \\boxed{answer}
 5. Support: Arithmetic, Algebra, Calculus, Geometry, Statistics.
 `;
 
@@ -98,14 +98,29 @@ async function solveMathProblem(problem) {
   });
 }
 
-// OCR Processing
+// OCR Processing with worker mode + preprocessing
 async function extractTextFromImage(imageBuffer) {
   try {
-    const worker = await createWorker();
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
-    const { data: { text } } = await worker.recognize(imageBuffer);
+    // ✅ Preprocess image: grayscale + binarize + resize
+    const processedImage = await sharp(imageBuffer)
+      .grayscale()
+      .threshold(128) // binarization
+      .resize(2000, null, { fit: 'inside' }) // resize to improve OCR
+      .toBuffer();
+
+    // ✅ Use Tesseract worker mode
+    const worker = await createWorker({
+      workerPath: require('tesseract.js').workerPath(),
+      langPath: path.join(__dirname, 'traineddata'), // folder containing equ.traineddata
+      corePath: require('tesseract.js-core').workerPath(),
+      logger: m => console.log(m) // Optional progress log
+    });
+
+    await worker.loadLanguage('equ');
+    await worker.initialize('equ');
+    const { data: { text } } = await worker.recognize(processedImage);
     await worker.terminate();
+
     return text.trim();
   } catch (error) {
     logger.error(`❌ OCR Error: ${error.message}`);
@@ -119,7 +134,7 @@ app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 
-// Serve everything in public/ (including articles folder inside public)
+// Serve everything in public/
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -142,31 +157,14 @@ app.post('/api/solve', async (req, res) => {
 
     let solution = await solveMathProblem(problem);
 
-    // Wrap LaTeX solution with MathJax delimiters if not already wrapped
-    if (!solution.includes('\(') && !solution.includes('\[')) {
-      solution = `\(${solution}\)`;
-    }
-
     res.json({ problem, solution });
   } catch (error) {
-    logger.error(`❌ API Error: ${error.message}`);
+    logger.error(`❌ Solve API Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/check', async (req, res) => {
-  try {
-    const response = await tryModel(models[0], "What is 2 + 2?");
-    res.json({ ok: true, answer: response });
-  } catch (err) {
-    logger.error('❌ Check Endpoint Error:', err.response?.data || err.message);
-    res.status(500).json({ ok: false, error: err.response?.data || err.message });
-  }
-});
-
-// Start Server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
-  console.log(`➡️  Server ready at http://localhost:${PORT}`);
 });
