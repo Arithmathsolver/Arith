@@ -175,7 +175,24 @@ Return only the fully corrected text, no extra commentary or explanation.
   return response.data.choices[0].message.content.trim();
 }
 
-// OCR Function with worker mode + eng+equ
+// Preload Tesseract Worker with 'equ' language
+let ocrWorker;
+(async () => {
+  ocrWorker = await createWorker({
+    workerPath: require.resolve('tesseract.js/dist/worker.min.js'),
+    corePath: require.resolve('tesseract.js-core/tesseract-core.wasm.js'),
+    logger: m => logger.info(`Tesseract preload: ${m.status} ${Math.round(m.progress * 100)}%`)
+  });
+  await ocrWorker.loadLanguage('equ');
+  await ocrWorker.initialize('equ');
+  await ocrWorker.setParameters({
+    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+    preserve_interword_spaces: '1'
+  });
+  logger.info("✅ Tesseract 'equ' language preloaded.");
+})();
+
+// OCR Function
 async function extractTextFromImage(imageBuffer) {
   try {
     const image = await sharp(imageBuffer)
@@ -184,21 +201,7 @@ async function extractTextFromImage(imageBuffer) {
       .normalize()
       .toBuffer();
 
-    const worker = await createWorker({
-      workerPath: require.resolve('tesseract.js/dist/worker.min.js'),
-      corePath: require.resolve('tesseract.js-core/tesseract-core.wasm.js'),
-      logger: m => logger.info(`Tesseract: ${m.status} ${Math.round(m.progress * 100)}%`)
-    });
-
-    await worker.loadLanguage('eng+equ');
-    await worker.initialize('eng+equ');
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-      preserve_interword_spaces: '1'
-    });
-
-    const { data: { text: rawText } } = await worker.recognize(image);
-    await worker.terminate();
+    const { data: { text: rawText } } = await ocrWorker.recognize(image);
 
     const postProcessed = postProcessMathText(rawText);
     const refined = await refineMathTextWithAI(postProcessed);
@@ -258,21 +261,7 @@ app.post('/api/ocr-preview', async (req, res) => {
       .normalize()
       .toBuffer();
 
-    const worker = await createWorker({
-      workerPath: require.resolve('tesseract.js/dist/worker.min.js'),
-      corePath: require.resolve('tesseract.js-core/tesseract-core.wasm.js'),
-      logger: m => logger.info(`Tesseract: ${m.status} ${Math.round(m.progress * 100)}%`)
-    });
-
-    await worker.loadLanguage('eng+equ');
-    await worker.initialize('eng+equ');
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-      preserve_interword_spaces: '1'
-    });
-
-    const { data: { text: rawText } } = await worker.recognize(image);
-    await worker.terminate();
+    const { data: { text: rawText } } = await ocrWorker.recognize(image);
 
     const postProcessed = postProcessMathText(rawText);
     const refined = await refineMathTextWithAI(postProcessed);
