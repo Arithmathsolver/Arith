@@ -10,8 +10,12 @@ const path = require('path');
 const fs = require('fs');
 
 // Create logs directory if it doesn't exist
-if (!fs.existsSync('logs')) {
-  fs.mkdirSync('logs');
+try {
+  if (!fs.existsSync('logs')) {
+    fs.mkdirSync('logs', { recursive: true });
+  }
+} catch (error) {
+  console.error('Could not create logs directory:', error.message);
 }
 
 // Logger Setup
@@ -23,14 +27,17 @@ const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' })
+    ...(fs.existsSync('logs') ? [
+      new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: 'logs/combined.log' })
+    ] : [])
   ]
 });
 
 // Validate API Key
 if (!process.env.TOGETHER_API_KEY) {
   logger.error('Missing TOGETHER_API_KEY in environment variables');
+  console.error('TOGETHER_API_KEY environment variable is required');
   process.exit(1);
 }
 
@@ -47,7 +54,7 @@ async function getCachedSolution(problem, solverFn) {
   const key = getCacheKey(problem);
   const cached = cache.get(key);
   if (cached) {
-    logger.info(`Using cached solution`);
+    logger.info('Using cached solution');
     return cached;
   }
   const solution = await solverFn();
@@ -188,12 +195,13 @@ async function extractTextFromImageWithAI(imageBuffer) {
     // Try multiple vision models as fallbacks
     const visionModels = [
       "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
-      "meta-llama/Llama-Vision-Free", 
-      "llava-hf/llava-1.5-7b-hf"
+      "meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo",
+      "meta-llama/Llama-Vision-Free"
     ];
 
     let response;
     let usedModel = null;
+    let lastError = null;
 
     for (const modelName of visionModels) {
       try {
@@ -229,17 +237,32 @@ async function extractTextFromImageWithAI(imageBuffer) {
         break; // Success, exit the loop
         
       } catch (modelError) {
+        lastError = modelError;
         logger.warn(`Vision model ${modelName} failed: ${modelError.response?.status} - ${modelError.response?.data?.error?.message || modelError.message}`);
         
-        // If this is the last model, throw the error
-        if (modelName === visionModels[visionModels.length - 1]) {
-          throw modelError;
-        }
-        // Otherwise continue to next model
+        // Continue to next model unless this is the last one
+        continue;
       }
     }
 
     if (!response || !usedModel) {
+      // If all vision models failed, provide detailed error info
+      if (lastError?.response) {
+        const status = lastError.response.status;
+        const errorData = lastError.response.data;
+        
+        if (status === 404) {
+          throw new Error('Vision models not available with your API key. Please upgrade your Together AI plan or use text input.');
+        } else if (status === 401) {
+          throw new Error('API key invalid. Please check your Together AI credentials.');
+        } else if (status === 429) {
+          throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+        } else if (status === 400) {
+          throw new Error('Request format invalid. Vision features may not be available on your plan.');
+        } else {
+          throw new Error(`Vision service error (${status}). Please try text input instead.`);
+        }
+      }
       throw new Error('All vision models unavailable. Please try typing the problem directly.');
     }
 
@@ -260,34 +283,7 @@ async function extractTextFromImageWithAI(imageBuffer) {
 
   } catch (error) {
     logger.error(`AI OCR Error: ${error.message}`);
-    
-    // Enhanced error logging
-    if (error.response) {
-      logger.error(`HTTP Status: ${error.response.status}`);
-      logger.error(`Error Response:`, JSON.stringify(error.response.data, null, 2));
-      
-      const errorMsg = error.response.data?.error?.message || '';
-      
-      if (error.response.status === 400) {
-        if (errorMsg.includes('image') || errorMsg.includes('vision')) {
-          throw new Error('Image format not supported. Please try a different JPG/PNG image.');
-        } else if (errorMsg.includes('token') || errorMsg.includes('length')) {
-          throw new Error('Image too complex. Please use a simpler, smaller image.');
-        } else if (errorMsg.includes('model')) {
-          throw new Error('Vision model not available. Please check your Together AI plan or try text input.');
-        } else {
-          throw new Error('Invalid request format. Please try a different image or use text input.');
-        }
-      } else if (error.response.status === 401) {
-        throw new Error('API key invalid. Please check your Together AI credentials.');
-      } else if (error.response.status === 429) {
-        throw new Error('Rate limit exceeded. Please wait and try again.');
-      } else if (error.response.status === 503 || error.response.status >= 500) {
-        throw new Error('Vision service temporarily down. Please try again later.');
-      }
-    }
-    
-    throw new Error(`Failed to extract text from image: ${error.message}. Try typing the problem directly.`);
+    throw error;
   }
 }
 
@@ -542,4 +538,15 @@ Examples:
             } catch (error) {
               showError('Health check failed: ' + error.message);
             }
-   
+          });
+
+          // Debug buttons
+          document.getElementById('debugVision').addEventListener('click', async () => {
+            showResult('<span class="loading"></span>Testing vision model...', 'info');
+            
+            try {
+              const response = await fetch('/debug/vision');
+              const data = await response.json();
+              
+              if (response.ok) {
+  
